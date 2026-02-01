@@ -1,5 +1,7 @@
-import {useEffect, useState, useRef, type ChangeEvent } from 'react'
-import { useSound } from '../hooks/useSound'
+import {useEffect, useState, useRef, type ChangeEvent, use } from 'react'
+// import { useSound } from '../sound/useSound'
+import { useDebouncedSound } from '../sound/useDebouncedSound'
+import { SoundSettings } from '../sound/SoundSettings'
 
 export default function Typing() {
     const [input, setInput] = useState<string>("")
@@ -8,8 +10,12 @@ export default function Typing() {
     const [typingDisabled, setTypingDisabed] = useState(false)
     const [typeText, setTypeText] = useState<string>('')
     const [shake, setShake] = useState(false)
-    const { playSound } = useSound()
-
+    // const { playSound } = useSound()
+    const playType = useDebouncedSound('type')
+    const playPop = useDebouncedSound('pop')
+    const playPaper = useDebouncedSound('paper')
+    const playOops = useDebouncedSound('oops')
+    const playError = useDebouncedSound('error')
     
     // const typeSpaceSound = useRef(new Audio("/sounds/spacebar.wav"))
 
@@ -62,23 +68,32 @@ export default function Typing() {
         if (value.length > input.length) {
             const i = value.length - 1
             if (value[i] !== typeText[i]) {
-                playSound('error', 0.4)                
-                playSound('oops', 0.2)                
-                setShake(true)
-                setTimeout(() => setShake(false), 200)
+                // playSound('error', 0.4)                
+                // playSound('oops', 0.2)     
+                playError()
+                playOops()           
+                triggerShake()
             } else {
                 // typeSound.current.play()
-                playSound('type', 0.8)
+                // playSound('type', 0.8)
+
                 // playSound(dingSound.current, 0.2)
-                playSound('pop', 0.6)
-                playSound('paper', 0.6)
+                // playSound('pop', 0.6)
+                // playSound('paper', 0.6)
                 // playSound(jumpSound.current, 0.6)
-                
+                playType()
+                playPop()
+                playPaper()
             }
 
         }
 
         setInput(value)
+    }
+
+    const triggerShake = () => {
+        setShake(true)
+        setTimeout(() => setShake(false), 200)
     }
 
     const reset = () => {
@@ -141,7 +156,7 @@ export default function Typing() {
 
             <button onClick={reset}>Reset</button>
             {/* <div className="inline-block text-4xl animate-juice">TEST</div> */}
-
+            <SoundSettings/>
         </div>
     )
 }

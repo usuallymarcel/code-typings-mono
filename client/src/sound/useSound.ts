@@ -1,5 +1,5 @@
 import { useContext } from 'react'
-import { SoundContext } from '../context/SoundContext'
+import { SoundContext } from './SoundContext'
 
 export const useSound = () => {
     const ctx = useContext(SoundContext)

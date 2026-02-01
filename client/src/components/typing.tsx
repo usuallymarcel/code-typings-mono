@@ -1,4 +1,5 @@
 import {useEffect, useState, useRef, type ChangeEvent } from 'react'
+import { useSound } from '../hooks/useSound'
 
 export default function Typing() {
     const [input, setInput] = useState<string>("")
@@ -7,13 +8,8 @@ export default function Typing() {
     const [typingDisabled, setTypingDisabed] = useState(false)
     const [typeText, setTypeText] = useState<string>('')
     const [shake, setShake] = useState(false)
-    const typeSound = useRef(new Audio("/sounds/type1.wav"))
-    const dingSound = useRef(new Audio("/sounds/Confirm 2.wav"))
-    const errorSound = useRef(new Audio("/sounds/Locked.wav"))
-    const popSound = useRef(new Audio("/sounds/pop34.wav"))
-    const jumpSound = useRef(new Audio("/sounds/jump25.wav"))
-    const paperSound = useRef(new Audio("/sounds/paper43.wav"))
-    const oopsSound = useRef(new Audio("/sounds/shone54.wav"))
+    const { playSound } = useSound()
+
     
     // const typeSpaceSound = useRef(new Audio("/sounds/spacebar.wav"))
 
@@ -50,17 +46,8 @@ export default function Typing() {
         }
     }
 
-    const playSound = (sound: HTMLAudioElement, volume: number = 1) => {
-        const clone = sound.cloneNode() as HTMLAudioElement
-        clone.playbackRate = 0.95 + Math.random() * 0.1
-        // clone.playbackRate = Math.random()
-        clone.volume = volume
-        clone.play()
-    }
-
     const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
-        typeSound.current.preload = "auto"
-        errorSound.current.preload = "auto"
+
         const value = e.target.value
 
         if (!startTime && value.length === 1) {
@@ -75,16 +62,16 @@ export default function Typing() {
         if (value.length > input.length) {
             const i = value.length - 1
             if (value[i] !== typeText[i]) {
-                playSound(errorSound.current, 0.4)                
-                playSound(oopsSound.current, 0.2)                
+                playSound('error', 0.4)                
+                playSound('oops', 0.2)                
                 setShake(true)
                 setTimeout(() => setShake(false), 200)
             } else {
                 // typeSound.current.play()
-                playSound(typeSound.current, 0.8)
+                playSound('type', 0.8)
                 // playSound(dingSound.current, 0.2)
-                playSound(popSound.current, 0.6)
-                playSound(paperSound.current, 0.6)
+                playSound('pop', 0.6)
+                playSound('paper', 0.6)
                 // playSound(jumpSound.current, 0.6)
                 
             }

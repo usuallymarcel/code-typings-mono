@@ -1,1 +1,32 @@
 @import "tailwindcss";
+
+@theme {
+  --animate-juice: juice 250ms cubic-bezier(0.2, 1.8, 0.4, 1);
+
+  @keyframes juice {
+    0% {
+      transform: scale(1);
+    }
+    25% {
+      transform: scale(1.45) rotate(-2deg);
+    }
+    50% {
+      transform: scale(0.85) rotate(2deg);
+    }
+    100% {
+      transform: scale(1);
+    }
+  }
+}
+
+@theme {
+  --animate-shake: shake 200ms ease-in-out;
+
+  @keyframes shake {
+    0% { transform: translateX(0); }
+    25% { transform: translateX(-6px); }
+    50% { transform: translateX(6px); }
+    75% { transform: translateX(-3px); }
+    100% { transform: translateX(0); }
+  }
+}

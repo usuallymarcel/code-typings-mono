@@ -1,15 +1,18 @@
-import {useEffect, useState, useRef, type ChangeEvent, use } from 'react'
+import {useEffect, useState, useRef, type ChangeEvent } from 'react'
 // import { useSound } from '../sound/useSound'
 import { useDebouncedSound } from '../sound/useDebouncedSound'
 import { SoundSettings } from '../sound/SoundSettings'
+import { useJuice } from '../juice/useJuice'
 
 export default function Typing() {
     const [input, setInput] = useState<string>("")
     const [startTime, setStartTime] = useState<number | null>(null)
     const [endTime, setEndTime] = useState<number | null>(null)
-    const [typingDisabled, setTypingDisabed] = useState(false)
+    const [typingDisabled, setTypingDisabled] = useState(false)
     const [typeText, setTypeText] = useState<string>('')
     const [shake, setShake] = useState(false)
+    const [juice, setJuice] = useJuice()
+
     // const { playSound } = useSound()
     const playType = useDebouncedSound('type')
     const playPop = useDebouncedSound('pop')
@@ -20,6 +23,12 @@ export default function Typing() {
     // const typeSpaceSound = useRef(new Audio("/sounds/spacebar.wav"))
 
     const inputRef = useRef<HTMLInputElement | null>(null)
+
+    useEffect(() => {
+    if (!typingDisabled) {
+        inputRef.current?.focus()
+    }
+    }, [typingDisabled])
 
     useEffect(() => {
         inputRef.current?.focus()
@@ -44,7 +53,6 @@ export default function Typing() {
         switch(event.key) {
             case 'Escape':
                 reset()
-                event.stopPropagation() //i think to stop esc from doing anything else
                 break
             case ' ': //spacebar
                 handleSpace()
@@ -62,25 +70,16 @@ export default function Typing() {
 
         if(value.length === typeText.length) {
             setEndTime(Date.now())
-            setTypingDisabed(true)
+            setTypingDisabled(true)
         }
 
         if (value.length > input.length) {
             const i = value.length - 1
-            if (value[i] !== typeText[i]) {
-                // playSound('error', 0.4)                
-                // playSound('oops', 0.2)     
+            if (value[i] !== typeText[i]) {   
                 playError()
                 playOops()           
                 triggerShake()
             } else {
-                // typeSound.current.play()
-                // playSound('type', 0.8)
-
-                // playSound(dingSound.current, 0.2)
-                // playSound('pop', 0.6)
-                // playSound('paper', 0.6)
-                // playSound(jumpSound.current, 0.6)
                 playType()
                 playPop()
                 playPaper()
@@ -100,8 +99,7 @@ export default function Typing() {
         setInput("")
         setStartTime(null)
         setEndTime(null)
-        setTypingDisabed(false)
-        inputRef.current?.focus()
+        setTypingDisabled(false)
     }
 
     const handleSpace = () => {
@@ -126,7 +124,7 @@ export default function Typing() {
                     let effect = ''
 
                     if (i === input.length-1) {
-                        effect = char === input[i] ? 'font-bold animate-juice' : ''
+                        effect = char === input[i] ? `font-bold ${juice ? 'animate-juice' : ''}` : ''
                         // effect = char === input[i] ? 'font-bold' : ''
                     }
                     if (i < input.length) {
@@ -155,7 +153,11 @@ export default function Typing() {
             </div>
 
             <button onClick={reset}>Reset</button>
-            {/* <div className="inline-block text-4xl animate-juice">TEST</div> */}
+            <div>
+                <button onClick={() => setJuice(prev => !prev)}>
+                    {juice ? 'Juice On :)' : 'Juice Off :|'}
+                </button>
+            </div>
             <SoundSettings/>
         </div>
     )

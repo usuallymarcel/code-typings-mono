@@ -1,4 +1,4 @@
-import { createContext, useRef, useState } from 'react'
+import { createContext, useEffect, useRef, useState } from 'react'
 import type { SoundEvent } from './soundEvent'
 
 export type SoundMap = Record<SoundEvent, string | null>
@@ -40,6 +40,10 @@ export const SoundProvider = ({ children }: { children: React.ReactNode }) => {
     })
     const [muted, setMuted] = useState(false)
     const audioCache = useRef<Map<string, HTMLAudioElement>>(new Map())
+
+    useEffect(() => {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(sounds))
+    }, [sounds])
 
     const playSound = (event: SoundEvent) => {
         if (muted) return

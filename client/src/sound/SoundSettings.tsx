@@ -16,11 +16,11 @@ export function SoundSettings() {
         toggleMute, 
     } = useSound()
 
-    const [hide, setHide] = useState<boolean>(false)
+    const [hide, setHide] = useState<boolean>(true)
 
 
     return (
-        <div className='p-4 bg-neutral-800 rounded'>
+        <div className='p-4 bg-neutral-800 rounded max-w-80'>
             <div className="flex items-center justify-between" onClick={() => setHide(prev => !prev)}>
 
 

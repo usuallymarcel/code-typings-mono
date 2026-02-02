@@ -13,6 +13,7 @@ type SoundContextValue = {
 }
 
 const STORAGE_KEY = 'typing-sounds'
+const MUTE_STORAGE_KEY = 'muted'
 
 type SoundConfig = {
     src: string | null
@@ -38,7 +39,10 @@ export const SoundProvider = ({ children }: { children: React.ReactNode }) => {
         const saved = localStorage.getItem(STORAGE_KEY)
         return saved ? JSON.parse(saved) : defaultState
     })
-    const [muted, setMuted] = useState(false)
+    const [muted, setMuted] = useState<boolean>(() => {
+        const muted = localStorage.getItem(MUTE_STORAGE_KEY)
+        return muted ? JSON.parse(muted) : false
+    })
     const audioCache = useRef<Map<string, HTMLAudioElement>>(new Map())
 
     useEffect(() => {
@@ -75,6 +79,9 @@ export const SoundProvider = ({ children }: { children: React.ReactNode }) => {
 
     const toggleMute = () => { setMuted(prev => !prev)}
 
+    useEffect(() => {
+        localStorage.setItem(MUTE_STORAGE_KEY, JSON.stringify(muted))
+    }, [muted]) 
     return (
         <SoundContext.Provider 
             value={{ 

@@ -5,12 +5,12 @@ services:
     restart: unless-stopped
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.code-typings-server.rule=Host(`typings.marcel.co.nz`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.code-typings-server.rule=Host(`api.marcel.co.nz`) && PathPrefix(`/typings-api`)"
       - "traefik.http.routers.code-typings-server.entrypoints=websecure"
       - "traefik.http.routers.code-typings-server.tls=true"
       - "traefik.http.routers.code-typings-server.tls.certresolver=myresolver"
       - "traefik.http.services.code-typings-server.loadbalancer.server.port=5000"
-      - "traefik.http.middlewares.code-typings-strip-api.stripprefix.prefixes=/api"
+      - "traefik.http.middlewares.code-typings-strip-api.stripprefix.prefixes=/typings-api"
       - "traefik.http.routers.code-typings-server.middlewares=code-typings-strip-api"
     networks:
       - proxy
@@ -21,11 +21,13 @@ services:
     restart: unless-stopped
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.code-typings-client.rule=Host(`typings.marcel.co.nz`)"
+      - "traefik.http.routers.code-typings-client.rule=Host(`api.marcel.co.nz`) && PathPrefix(`/typings`)"
       - "traefik.http.routers.code-typings-client.entrypoints=websecure"
       - "traefik.http.routers.code-typings-client.tls=true"
       - "traefik.http.routers.code-typings-client.tls.certresolver=myresolver"
       - "traefik.http.services.code-typings-client.loadbalancer.server.port=80"
+      - "traefik.http.middlewares.code-typings-front-strip.stripprefix.prefixes=/typings"
+      - "traefik.http.routers.code-typings-client.middlewares=code-typings-front-strip"
     networks:
       - proxy
 

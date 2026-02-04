@@ -32,7 +32,7 @@ export default function Typing() {
 
     useEffect(() => {
         inputRef.current?.focus()
-        fetch(`${import.meta.env.VITE_API_URL}/api`)
+        fetch(`${import.meta.env.VITE_API_URL}/api/text`)
         .then((res) => res.json())
         .then((data) => {
             setTypeText(data.message)

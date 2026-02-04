@@ -11,7 +11,7 @@ const PORT = process.env.PORT || 5000;
 
 // app.use(express.static(path.resolve(__dirname, '../client/dist')));
 
-app.get('/api', (_req, res) => {
+app.get('/text', (_req, res) => {
     res.json({ message: "sample text from server"});
 });
 

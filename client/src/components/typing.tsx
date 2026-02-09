@@ -3,6 +3,8 @@ import {useEffect, useState, useRef, type ChangeEvent } from 'react'
 import { useDebouncedSound } from '../sound/useDebouncedSound'
 import { SoundSettings } from '../sound/SoundSettings'
 import { useJuice } from '../juice/useJuice'
+import type { TypingStats } from './utils/stats'
+import { calculateWPM, calculateAccuracy } from './utils/stats'
 
 export default function Typing() {
     const [input, setInput] = useState<string>("")
@@ -12,6 +14,7 @@ export default function Typing() {
     const [typeText, setTypeText] = useState<string>('')
     const [shake, setShake] = useState(false)
     const [juice, setJuice] = useJuice()
+    const [stats, setStats] = useState<TypingStats>({wpm: 0, accuracy: 100})
 
     // const { playSound } = useSound()
     const playType = useDebouncedSound('type')
@@ -24,6 +27,21 @@ export default function Typing() {
 
     const inputRef = useRef<HTMLInputElement | null>(null)
 
+    let interval: number
+
+    useEffect(() => {
+        interval = setInterval(() => {
+            if (startTime) {
+                setStats({
+                    wpm: calculateWPM(startTime, input.length, endTime ?? undefined), 
+                    accuracy: calculateAccuracy(input, typeText)
+                })
+            }
+        }, 500)
+
+        return () => clearInterval(interval)
+    }, [startTime, input, endTime, typeText])
+
     useEffect(() => {
     if (!typingDisabled) {
         inputRef.current?.focus()
@@ -32,7 +50,7 @@ export default function Typing() {
 
     useEffect(() => {
         inputRef.current?.focus()
-        fetch(`${import.meta.env.VITE_API_URL}/api/text`)
+        fetch(`${import.meta.env.VITE_API_URL}/text`)
         .then((res) => res.json())
         .then((data) => {
             setTypeText(data.message)
@@ -70,6 +88,7 @@ export default function Typing() {
 
         if(value.length === typeText.length) {
             setEndTime(Date.now())
+            clearInterval(interval)
             setTypingDisabled(true)
         }
 
@@ -85,6 +104,12 @@ export default function Typing() {
                 playPaper()
             }
 
+        }
+        if (startTime) {
+            setStats({
+                wpm: calculateWPM(startTime, input.length, endTime ?? undefined), 
+                accuracy: calculateAccuracy(input, typeText)
+            })
         }
 
         setInput(value)
@@ -105,14 +130,6 @@ export default function Typing() {
     const handleSpace = () => {
         console.log('spacebar')
     }
-
-    const elapsed: number | null = startTime ? (endTime ?? Date.now()) - startTime : null
-
-    const minutes = elapsed ? elapsed / 1000 / 60 : 0
-
-    const wpm = minutes > 0 ? Math.round((input.length / 5 ) / minutes) : 0
-
-    const accuracy = input.length > 0 ? Math.round((input.split("").filter((char, i) => char === typeText[i]).length / input.length) * 100) : 100
 
     return (
         <div className="font-mono bg-neutral-900 text-white min-h-screen p-10">
@@ -148,8 +165,8 @@ export default function Typing() {
             />
 
             <div className="mt-5">
-                <p>WPM: {wpm}</p>
-                <p>Accuracy: {accuracy}</p>
+                <p>WPM: {stats.wpm}</p>
+                <p>Accuracy: {stats.accuracy}</p>
             </div>
 
             <button onClick={reset}>Reset</button>

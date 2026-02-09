@@ -12,7 +12,7 @@ const PORT = process.env.PORT || 5000;
 // app.use(express.static(path.resolve(__dirname, '../client/dist')));
 
 app.get('/text', (_req, res) => {
-    res.json({ message: "sample text from server"});
+    res.json({ message: "This is longer sample text coming from the server to make sure that the front is equipped to handle such a case blah blah blah this is sample text from server"});
 });
 
 app.listen(PORT, () => console.log(`Running on port ${PORT}`))

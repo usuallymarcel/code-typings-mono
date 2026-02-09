@@ -135,21 +135,33 @@ export default function Typing() {
         <div className="font-mono bg-neutral-900 text-white min-h-screen p-10">
             {/* <h1>Code Typing</h1> */}
 
-            <div className={`whitespace-pre-wrap ${shake ? "animate-shake" : ""}`}>
+            <div className={`whitespace-pre-wrap ${shake ? "animate-shake" : ""}`} onClick={() => {
+                inputRef.current?.focus()
+            }}>
                 {typeText.split("").map((char, i) => {
                     let color = "text-white-500"
                     let effect = ''
+                    let cursor = ''
+                    let letter = ''
 
                     if (i === input.length-1) {
                         effect = char === input[i] ? `font-bold ${juice ? 'animate-juice' : ''}` : ''
                         // effect = char === input[i] ? 'font-bold' : ''
                     }
+                    if (i === input.length) {
+                        cursor = 'bg-gray-700'
+                    }
                     if (i < input.length) {
-                        color = char === input[i] ? "text-lime-500" : "text-red-500"
+                        if (char === input[i]) {
+                            color = 'text-lime-500'
+                        } else {
+                            color = 'text-red-500'
+                            letter = input[i]
+                        }
                     }
                     return (<span key={i} 
-                        className={`${color} inline-block text-2xl leading-relaxed ${effect}`}>
-                            {char}
+                        className={`${color} inline-block text-2xl leading-relaxed ${effect} ${cursor}`}>
+                            {letter ? letter : char}
                             </span>)
                 })}
             </div>
@@ -161,7 +173,8 @@ export default function Typing() {
                 onChange={handleChange}
                 spellCheck={false}
                 disabled={typingDisabled}
-                className="flex flex-row"
+                className="flex flex-row opacity-0"
+                autoComplete='off'
             />
 
             <div className="mt-5">

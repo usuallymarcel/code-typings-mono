@@ -131,6 +131,44 @@ export default function Typing() {
         console.log('spacebar')
     }
 
+    const displayTypeText = () => {
+        return typeText.split("").map((char, i) => {
+            let color = "text-white-500"
+            let effect = ""
+            let cursor = ""
+            let letter = ""
+
+            if (i === input.length - 1) {
+            effect =
+                char === input[i]
+                ? `font-bold ${juice ? "animate-juice" : ""}`
+                : ""
+            }
+
+            if (i === input.length) {
+            cursor = "bg-gray-700"
+            }
+
+            if (i < input.length) {
+            if (char === input[i]) {
+                color = "text-lime-500"
+            } else {
+                color = "text-red-500"
+                letter = input[i]
+            }
+            }
+
+            return (
+            <span
+                key={`${i}`}
+                className={`${color} inline-block text-2xl leading-relaxed ${effect} ${cursor}`}
+            >
+                {letter || char}
+            </span>
+            )
+        })
+    }
+
     return (
         <div className="font-mono bg-neutral-900 text-white min-h-screen p-10">
             {/* <h1>Code Typing</h1> */}
@@ -138,36 +176,11 @@ export default function Typing() {
             <div className={`whitespace-pre-wrap ${shake ? "animate-shake" : ""}`} onClick={() => {
                 inputRef.current?.focus()
             }}>
-                {typeText.split("").map((char, i) => {
-                    let color = "text-white-500"
-                    let effect = ''
-                    let cursor = ''
-                    let letter = ''
-
-                    if (i === input.length-1) {
-                        effect = char === input[i] ? `font-bold ${juice ? 'animate-juice' : ''}` : ''
-                        // effect = char === input[i] ? 'font-bold' : ''
-                    }
-                    if (i === input.length) {
-                        cursor = 'bg-gray-700'
-                    }
-                    if (i < input.length) {
-                        if (char === input[i]) {
-                            color = 'text-lime-500'
-                        } else {
-                            color = 'text-red-500'
-                            letter = input[i]
-                        }
-                    }
-                    return (<span key={i} 
-                        className={`${color} inline-block text-2xl leading-relaxed ${effect} ${cursor}`}>
-                            {letter ? letter : char}
-                            </span>)
-                })}
+                { displayTypeText() }
             </div>
 
             <input
-                id={'text-input'} 
+                id={'text-input'}
                 ref={inputRef}
                 value={input}
                 onChange={handleChange}

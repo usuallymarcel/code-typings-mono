@@ -133,7 +133,8 @@ export default function Typing() {
 
 const displayTypeText = () => {
     const elements = []
-    const tokens = typeText.split(/(\s+)/)
+    const tokens = typeText.match(/\S+\s*/g) || []
+
     let globalIndex = 0
 
     for (let w = 0; w < tokens.length; w++) {
@@ -186,7 +187,7 @@ const displayTypeText = () => {
                 {letters}
             </div>
         )
-    }
+}
 
     return elements
 }
@@ -196,7 +197,7 @@ const displayTypeText = () => {
         <div className="font-mono bg-neutral-900 text-white min-h-screen p-10">
             {/* <h1>Code Typing</h1> */}
 
-            <div className={`whitespace-pre-wrap ${shake ? "animate-shake" : ""}`} onClick={() => {
+            <div className={`whitespace-pre-wrap max-w-4xl ${shake ? "animate-shake" : ""}`} onClick={() => {
                 inputRef.current?.focus()
             }}>
                 { displayTypeText() }

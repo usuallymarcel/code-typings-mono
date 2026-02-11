@@ -1,4 +1,4 @@
-import {useEffect, useState, useRef, type ChangeEvent } from 'react'
+import {useEffect, useState, useRef, type ChangeEvent, useCallback } from 'react'
 // import { useSound } from '../sound/useSound'
 import { useDebouncedSound } from '../sound/useDebouncedSound'
 import { SoundSettings } from '../sound/SoundSettings'
@@ -15,6 +15,7 @@ export default function Typing() {
     const [shake, setShake] = useState(false)
     const [juice, setJuice] = useJuice()
     const [stats, setStats] = useState<TypingStats>({wpm: 0, accuracy: 100})
+    const intervalRef = useRef(0)
 
     // const { playSound } = useSound()
     const playType = useDebouncedSound('type')
@@ -27,10 +28,8 @@ export default function Typing() {
 
     const inputRef = useRef<HTMLInputElement | null>(null)
 
-    let interval: number
-
     useEffect(() => {
-        interval = setInterval(() => {
+        intervalRef.current = setInterval(() => {
             if (startTime) {
                 setStats({
                     wpm: calculateWPM(startTime, input.length, endTime ?? undefined), 
@@ -39,7 +38,7 @@ export default function Typing() {
             }
         }, 500)
 
-        return () => clearInterval(interval)
+        return () => clearInterval(intervalRef.current)
     }, [startTime, input, endTime, typeText])
 
     useEffect(() => {
@@ -57,6 +56,28 @@ export default function Typing() {
         })
     }, [])
 
+    const reset = () => {
+        setInput("")
+        setStartTime(null)
+        setEndTime(null)
+        setTypingDisabled(false)
+    }
+
+    const handleSpace = () => {
+        console.log('spacebar')
+    }
+    
+    const handleKeyPress = useCallback((event: KeyboardEvent) => {
+    switch(event.key) {
+        case 'Escape':
+            reset()
+            break
+        case ' ': //spacebar
+            handleSpace()
+            break
+        }
+    }, [])
+
     useEffect(() => {
         const listener = (event: KeyboardEvent) => {handleKeyPress(event)}
 
@@ -65,19 +86,9 @@ export default function Typing() {
         return () => {
             window.removeEventListener('keydown', listener)
         }
-    }, [])
+    }, [handleKeyPress])
 
-    const handleKeyPress = (event: KeyboardEvent) => {
-        switch(event.key) {
-            case 'Escape':
-                reset()
-                break
-            case ' ': //spacebar
-                handleSpace()
-                break
-        }
-    }
-
+        
     const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
 
         const value = e.target.value
@@ -88,7 +99,7 @@ export default function Typing() {
 
         if(value.length === typeText.length) {
             setEndTime(Date.now())
-            clearInterval(interval)
+            clearInterval(intervalRef.current)
             setTypingDisabled(true)
         }
 
@@ -108,7 +119,7 @@ export default function Typing() {
         if (startTime) {
             setStats({
                 wpm: calculateWPM(startTime, input.length, endTime ?? undefined), 
-                accuracy: calculateAccuracy(input, typeText)
+                accuracy: calculateAccuracy(value, typeText)
             })
         }
 
@@ -118,17 +129,6 @@ export default function Typing() {
     const triggerShake = () => {
         setShake(true)
         setTimeout(() => setShake(false), 200)
-    }
-
-    const reset = () => {
-        setInput("")
-        setStartTime(null)
-        setEndTime(null)
-        setTypingDisabled(false)
-    }
-
-    const handleSpace = () => {
-        console.log('spacebar')
     }
 
     const displayTypeText = () => {

@@ -132,7 +132,12 @@ export default function Typing() {
     }
 
     const displayTypeText = () => {
-        return typeText.split("").map((char, i) => {
+        const spans = []
+
+        const chars = typeText.split("")
+        for (let i = 0; i < chars.length; i++) {
+            const char = chars[i]
+
             let color = "text-white-500"
             let effect = ""
             let cursor = ""
@@ -150,23 +155,26 @@ export default function Typing() {
             }
 
             if (i < input.length) {
-            if (char === input[i]) {
-                color = "text-lime-500"
-            } else {
-                color = "text-red-500"
-                letter = input[i]
-            }
+                if (char === input[i]) {
+                    color = "text-lime-500"
+                } else {
+                    color = "text-red-500"
+                    letter = input[i]
+                }
             }
 
-            return (
+            spans.push(
             <span
                 key={`${i}`}
                 className={`${color} inline-block text-2xl leading-relaxed ${effect} ${cursor}`}
             >
                 {letter || char}
             </span>
+            
             )
-        })
+        }
+
+        return spans
     }
 
     return (

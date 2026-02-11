@@ -131,51 +131,66 @@ export default function Typing() {
         setTimeout(() => setShake(false), 200)
     }
 
-    const displayTypeText = () => {
-        const spans = []
+const displayTypeText = () => {
+    const elements = []
+    const tokens = typeText.split(/(\s+)/)
+    let globalIndex = 0
 
-        const chars = typeText.split("")
-        for (let i = 0; i < chars.length; i++) {
-            const char = chars[i]
+    for (let w = 0; w < tokens.length; w++) {
+        const token = tokens[w]
+
+        const letters = []
+
+        for (let i = 0; i < token.length; i++) {
+            const char = token[i]
 
             let color = "text-white-500"
             let effect = ""
             let cursor = ""
             let letter = ""
 
-            if (i === input.length - 1) {
-            effect =
-                char === input[i]
-                ? `font-bold ${juice ? "animate-juice" : ""}`
-                : ""
+            if (globalIndex === input.length - 1) {
+                effect =
+                    char === input[globalIndex]
+                        ? `font-bold ${juice ? "animate-juice" : ""}`
+                        : ""
             }
 
-            if (i === input.length) {
-            cursor = "bg-gray-700"
+            if (globalIndex === input.length) {
+                cursor = "bg-gray-700"
             }
 
-            if (i < input.length) {
-                if (char === input[i]) {
+            if (globalIndex < input.length) {
+                if (char === input[globalIndex]) {
                     color = "text-lime-500"
                 } else {
                     color = "text-red-500"
-                    letter = input[i]
+                    letter = input[globalIndex]
                 }
             }
 
-            spans.push(
-            <span
-                key={`${i}`}
-                className={`${color} inline-block text-2xl leading-relaxed ${effect} ${cursor}`}
-            >
-                {letter || char}
-            </span>
-            
+            letters.push(
+                <span
+                    key={`char-${globalIndex}`}
+                    className={`${color} inline-block text-2xl leading-relaxed ${effect} ${cursor}`}
+                >
+                    {letter || char}
+                </span>
             )
+
+            globalIndex++
         }
 
-        return spans
+        elements.push(
+            <div key={`word-${w}`} className="inline-block">
+                {letters}
+            </div>
+        )
     }
+
+    return elements
+}
+
 
     return (
         <div className="font-mono bg-neutral-900 text-white min-h-screen p-10">

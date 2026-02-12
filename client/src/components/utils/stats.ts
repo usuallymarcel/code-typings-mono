@@ -14,4 +14,34 @@ export function calculateAccuracy(input: string, text: string): number {
 export interface TypingStats {
     wpm: number
     accuracy: number
+    cps: number
+    combo: number
+    cpsXcombo: number
+}
+
+export function calculateCharactersPerSecond(startTime: number, input: string, endTime?: number) : number {
+
+    const elapsed = (endTime ?? Date.now()) - startTime
+    const seconds = elapsed / 1000
+
+    return input.length/seconds
+}
+
+export function calculateMultiplier(lengthOfCorrectChars: number): number {
+    
+    return Math.min(Math.max(lengthOfCorrectChars/50, 1), 2)
+}
+
+export function caluclateCorrectLetterChain(value: string, text: string): number {
+    let chain = 0
+
+    for(let i = 0; i < value.length; i++) {
+        if (value[i] === text[i]){
+            chain++
+        } else {
+            chain = 0
+        }
+    }
+
+    return chain
 }

@@ -1,10 +1,10 @@
-import {useEffect, useState, useRef, type ChangeEvent, useCallback } from 'react'
+import {useEffect, useState, useRef, type ChangeEvent, useCallback, useMemo } from 'react'
 // import { useSound } from '../sound/useSound'
 import { useDebouncedSound } from '../sound/useDebouncedSound'
 import { SoundSettings } from '../sound/SoundSettings'
 import { useJuice } from '../juice/useJuice'
 import type { TypingStats } from './utils/stats'
-import { calculateWPM, calculateAccuracy } from './utils/stats'
+import { calculateWPM, calculateAccuracy, calculateCharactersPerSecond, calculateMultiplier, caluclateCorrectLetterChain } from './utils/stats'
 
 export default function Typing() {
     const [input, setInput] = useState<string>("")
@@ -14,8 +14,40 @@ export default function Typing() {
     const [typeText, setTypeText] = useState<string>('')
     const [shake, setShake] = useState(false)
     const [juice, setJuice] = useJuice()
-    const [stats, setStats] = useState<TypingStats>({wpm: 0, accuracy: 100})
+    const [stats, setStats] = useState<TypingStats>({wpm: 0, accuracy: 100, cps: 0, combo: 0, cpsXcombo: 0})
     const intervalRef = useRef(0)
+    const [score, setScore] = useState(0)
+
+    const correctLetterChain = useMemo(() => {
+        return caluclateCorrectLetterChain(input, typeText)
+    }, [input, typeText])
+
+    const inputRefState = useRef(input)
+    const startTimeRef = useRef(startTime)
+    const endTimeRef = useRef(endTime)
+    const typeTextRef = useRef(typeText)
+    const correctLetterChainRef = useRef(correctLetterChain)
+
+    useEffect(() => {
+        inputRefState.current = input
+    }, [input])
+
+    useEffect(() => {
+        startTimeRef.current = startTime
+    }, [startTime])
+
+    useEffect(() => {
+        endTimeRef.current = endTime
+    }, [endTime])
+
+    useEffect(() => {
+        typeTextRef.current = typeText
+    }, [typeText])
+
+    useEffect(() => {
+        correctLetterChainRef.current = correctLetterChain
+    }, [correctLetterChain])
+
 
     // const { playSound } = useSound()
     const playType = useDebouncedSound('type')
@@ -29,17 +61,41 @@ export default function Typing() {
     const inputRef = useRef<HTMLInputElement | null>(null)
 
     useEffect(() => {
-        intervalRef.current = setInterval(() => {
-            if (startTime) {
-                setStats({
-                    wpm: calculateWPM(startTime, input.length, endTime ?? undefined), 
-                    accuracy: calculateAccuracy(input, typeText)
-                })
-            }
+        intervalRef.current = window.setInterval(() => {
+            const start = startTimeRef.current
+            if (!start || typingDisabledRef.current) return 
+
+            const inputVal = inputRefState.current
+            const end = endTimeRef.current
+            const text = typeTextRef.current
+            const chain = correctLetterChainRef.current
+            
+            const wpm = calculateWPM(start, inputVal.length, end ?? undefined)
+            const accuracy = calculateAccuracy(inputVal, text)
+            const cps = calculateCharactersPerSecond(start, inputVal, end ?? undefined)
+            const combo = calculateMultiplier(chain)
+            const cpsXcombo = cps * combo
+
+            setStats({
+                wpm,
+                accuracy,
+                cps,
+                combo,
+                cpsXcombo
+            })
+
+            setScore(prev => prev + cpsXcombo)
+            
         }, 500)
 
         return () => clearInterval(intervalRef.current)
-    }, [startTime, input, endTime, typeText])
+    }, [])
+
+    const typingDisabledRef = useRef(typingDisabled)
+
+    useEffect(() => {
+        typingDisabledRef.current = typingDisabled
+    }, [typingDisabled])
 
     useEffect(() => {
     if (!typingDisabled) {
@@ -61,6 +117,13 @@ export default function Typing() {
         setStartTime(null)
         setEndTime(null)
         setTypingDisabled(false)
+        setStats({ wpm: 0, accuracy: 0, cps: 0, combo: 0, cpsXcombo: 0})
+        setScore(0)
+
+        inputRefState.current = ""
+        startTimeRef.current = null
+        endTimeRef.current = null
+        correctLetterChainRef.current = 0
     }
 
     const handleSpace = () => {
@@ -99,7 +162,6 @@ export default function Typing() {
 
         if(value.length === typeText.length) {
             setEndTime(Date.now())
-            clearInterval(intervalRef.current)
             setTypingDisabled(true)
         }
 
@@ -116,12 +178,15 @@ export default function Typing() {
             }
 
         }
-        if (startTime) {
-            setStats({
-                wpm: calculateWPM(startTime, input.length, endTime ?? undefined), 
-                accuracy: calculateAccuracy(value, typeText)
-            })
-        }
+        // if (startTime) {
+        //     setStats({
+        //         wpm: calculateWPM(startTime, input.length, endTime ?? undefined), 
+        //         accuracy: calculateAccuracy(value, typeText),
+        //         cps: calculateCharactersPerSecond(startTime, input, endTime ?? undefined),
+        //         combo: calculateMultiplier(correctLetterChain),
+        //         cpsXcombo: stats.combo * stats.cps
+        //     })
+        // }
 
         setInput(value)
     }
@@ -134,7 +199,8 @@ export default function Typing() {
 const displayTypeText = () => {
     const elements = []
     const tokens = typeText.match(/\S+\s*/g) || []
-
+    
+    let correctLettersLength = 0
     let globalIndex = 0
 
     for (let w = 0; w < tokens.length; w++) {
@@ -164,9 +230,11 @@ const displayTypeText = () => {
             if (globalIndex < input.length) {
                 if (char === input[globalIndex]) {
                     color = "text-lime-500"
+                    correctLettersLength++
                 } else {
                     color = "text-red-500"
                     letter = input[globalIndex]
+                    correctLettersLength = 0
                 }
             }
 
@@ -215,16 +283,22 @@ const displayTypeText = () => {
             />
 
             <div className="mt-5">
-                <p>WPM: {stats.wpm}</p>
+                <p>Words Per Minute (WPM): {stats.wpm}</p>
                 <p>Accuracy: {stats.accuracy}</p>
-            </div>
+                <p>Characters Per Second (CPS): {stats.cps}</p>
+                <p>Combo: {stats.combo}</p>
+                <p>Correct Letters Chain: {correctLetterChain}</p>
+                <p>cps * combo: {stats.cpsXcombo}</p>
+            </div><br />
+
+            <p>Score: {score}</p><br />
 
             <button onClick={reset}>Reset</button>
             <div>
                 <button onClick={() => setJuice(prev => !prev)}>
                     {juice ? 'Juice On :)' : 'Juice Off :|'}
                 </button>
-            </div>
+            </div><br />
             <SoundSettings/>
         </div>
     )

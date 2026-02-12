@@ -5,6 +5,7 @@ import { SoundSettings } from '../sound/SoundSettings'
 import { useJuice } from '../juice/useJuice'
 import type { TypingStats } from './utils/stats'
 import { calculateWPM, calculateAccuracy, calculateCharactersPerSecond, calculateMultiplier, caluclateCorrectLetterChain } from './utils/stats'
+import { useGameLoop } from '../game/useGameLoop'
 
 export default function Typing() {
     const [input, setInput] = useState<string>("")
@@ -15,38 +16,11 @@ export default function Typing() {
     const [shake, setShake] = useState(false)
     const [juice, setJuice] = useJuice()
     const [stats, setStats] = useState<TypingStats>({wpm: 0, accuracy: 100, cps: 0, combo: 0, cpsXcombo: 0})
-    const intervalRef = useRef(0)
     const [score, setScore] = useState(0)
 
     const correctLetterChain = useMemo(() => {
         return caluclateCorrectLetterChain(input, typeText)
     }, [input, typeText])
-
-    const inputRefState = useRef(input)
-    const startTimeRef = useRef(startTime)
-    const endTimeRef = useRef(endTime)
-    const typeTextRef = useRef(typeText)
-    const correctLetterChainRef = useRef(correctLetterChain)
-
-    useEffect(() => {
-        inputRefState.current = input
-    }, [input])
-
-    useEffect(() => {
-        startTimeRef.current = startTime
-    }, [startTime])
-
-    useEffect(() => {
-        endTimeRef.current = endTime
-    }, [endTime])
-
-    useEffect(() => {
-        typeTextRef.current = typeText
-    }, [typeText])
-
-    useEffect(() => {
-        correctLetterChainRef.current = correctLetterChain
-    }, [correctLetterChain])
 
 
     // const { playSound } = useSound()
@@ -60,20 +34,16 @@ export default function Typing() {
 
     const inputRef = useRef<HTMLInputElement | null>(null)
 
-    useEffect(() => {
-        intervalRef.current = window.setInterval(() => {
-            const start = startTimeRef.current
-            if (!start || typingDisabledRef.current) return 
+    useGameLoop({
+        enabled: !!startTime && !typingDisabled,
+        onTick: (dt) => {
+            if (!startTime) return
 
-            const inputVal = inputRefState.current
-            const end = endTimeRef.current
-            const text = typeTextRef.current
-            const chain = correctLetterChainRef.current
-            
-            const wpm = calculateWPM(start, inputVal.length, end ?? undefined)
-            const accuracy = calculateAccuracy(inputVal, text)
-            const cps = calculateCharactersPerSecond(start, inputVal, end ?? undefined)
-            const combo = calculateMultiplier(chain)
+            const wpm = calculateWPM(startTime, input.length, endTime ?? undefined)
+            const accuracy = calculateAccuracy(input, typeText)
+            const cps = calculateCharactersPerSecond(startTime, input, endTime ?? undefined)
+            const combo = calculateMultiplier(correctLetterChain)
+
             const cpsXcombo = cps * combo
 
             setStats({
@@ -84,12 +54,9 @@ export default function Typing() {
                 cpsXcombo
             })
 
-            setScore(prev => prev + cpsXcombo)
-            
-        }, 500)
-
-        return () => clearInterval(intervalRef.current)
-    }, [])
+            setScore(prev => prev + cpsXcombo * dt)
+        }
+    })
 
     const typingDisabledRef = useRef(typingDisabled)
 
@@ -119,11 +86,6 @@ export default function Typing() {
         setTypingDisabled(false)
         setStats({ wpm: 0, accuracy: 0, cps: 0, combo: 0, cpsXcombo: 0})
         setScore(0)
-
-        inputRefState.current = ""
-        startTimeRef.current = null
-        endTimeRef.current = null
-        correctLetterChainRef.current = 0
     }
 
     const handleSpace = () => {

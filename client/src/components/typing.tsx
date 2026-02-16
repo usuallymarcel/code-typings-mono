@@ -17,6 +17,7 @@ export default function Typing() {
     const [juice, setJuice] = useJuice()
     const [stats, setStats] = useState<TypingStats>({wpm: 0, accuracy: 100, cps: 0, combo: 0, cpsXcombo: 0})
     const [score, setScore] = useState(0)
+    const maxCombo = useRef(0)
 
     const correctLetterChain = useMemo(() => {
         return caluclateCorrectLetterChain(input, typeText)
@@ -44,6 +45,10 @@ export default function Typing() {
             const cps = calculateCharactersPerSecond(startTime, input, endTime ?? undefined)
             const combo = calculateMultiplier(correctLetterChain)
 
+            if(combo > maxCombo.current) {
+                maxCombo.current = combo
+            }
+
             const cpsXcombo = cps * combo
 
             setStats({
@@ -54,7 +59,7 @@ export default function Typing() {
                 cpsXcombo
             })
 
-            setScore(prev => prev + cpsXcombo * dt)
+            // setScore(prev => prev + cpsXcombo * dt)
         }
     })
 
@@ -125,6 +130,7 @@ export default function Typing() {
         if(value.length === typeText.length) {
             setEndTime(Date.now())
             setTypingDisabled(true)
+            setScore(stats.wpm * stats.accuracy * maxCombo.current)
         }
 
         if (value.length > input.length) {

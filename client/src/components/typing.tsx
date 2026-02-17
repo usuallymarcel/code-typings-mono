@@ -1,12 +1,11 @@
-import {useEffect, useState, useRef, type ChangeEvent, useCallback, useMemo } from 'react'
+import {useEffect, useState, useRef, type ChangeEvent, useCallback } from 'react'
 // import { useSound } from '../sound/useSound'
 import { useDebouncedSound } from '../sound/useDebouncedSound'
 import { SoundSettings } from '../sound/SoundSettings'
 import { useJuice } from '../juice/useJuice'
 import type { TypingStats } from './utils/stats'
-import { calculateWPM, calculateAccuracy, calculateCharactersPerSecond, caluclateCorrectLetterChain } from './utils/stats'
+import { calculateWPM, calculateAccuracy, calculateCharactersPerSecond } from './utils/stats'
 import { useGameLoop } from '../game/useGameLoop'
-import { Meter } from './stats/meter'
 
 export default function Typing() {
     const [input, setInput] = useState<string>("")

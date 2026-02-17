@@ -4,8 +4,9 @@ import { useDebouncedSound } from '../sound/useDebouncedSound'
 import { SoundSettings } from '../sound/SoundSettings'
 import { useJuice } from '../juice/useJuice'
 import type { TypingStats } from './utils/stats'
-import { calculateWPM, calculateAccuracy, calculateCharactersPerSecond, calculateMultiplier, caluclateCorrectLetterChain } from './utils/stats'
+import { calculateWPM, calculateAccuracy, calculateCharactersPerSecond, caluclateCorrectLetterChain } from './utils/stats'
 import { useGameLoop } from '../game/useGameLoop'
+import { Meter } from './stats/meter'
 
 export default function Typing() {
     const [input, setInput] = useState<string>("")
@@ -18,11 +19,7 @@ export default function Typing() {
     const [stats, setStats] = useState<TypingStats>({wpm: 0, accuracy: 100, cps: 0, combo: 0, cpsXcombo: 0})
     const [score, setScore] = useState(0)
     const maxCombo = useRef(0)
-
-    const correctLetterChain = useMemo(() => {
-        return caluclateCorrectLetterChain(input, typeText)
-    }, [input, typeText])
-
+    const comboRef = useRef(1)
 
     // const { playSound } = useSound()
     const playType = useDebouncedSound('type')
@@ -43,19 +40,21 @@ export default function Typing() {
             const wpm = calculateWPM(startTime, input.length, endTime ?? undefined)
             const accuracy = calculateAccuracy(input, typeText)
             const cps = calculateCharactersPerSecond(startTime, input, endTime ?? undefined)
-            const combo = calculateMultiplier(correctLetterChain)
 
-            if(combo > maxCombo.current) {
-                maxCombo.current = combo
+            comboRef.current -= dt * (comboRef.current * 0.1)
+
+            if (comboRef.current < 1) {
+                comboRef.current = 1
             }
 
-            const cpsXcombo = cps * combo
+            const multiplier = comboRef.current
+            const cpsXcombo = cps * multiplier
 
             setStats({
                 wpm,
                 accuracy,
                 cps,
-                combo,
+                combo: multiplier,
                 cpsXcombo
             })
 
@@ -89,6 +88,9 @@ export default function Typing() {
         setStartTime(null)
         setEndTime(null)
         setTypingDisabled(false)
+
+        comboRef.current = 1
+        maxCombo.current = 1
         setStats({ wpm: 0, accuracy: 0, cps: 0, combo: 0, cpsXcombo: 0})
         setScore(0)
     }
@@ -135,11 +137,20 @@ export default function Typing() {
 
         if (value.length > input.length) {
             const i = value.length - 1
-            if (value[i] !== typeText[i]) {   
+            if (value[i] !== typeText[i]) {
+                comboRef.current *= 0.85
+                if (comboRef.current < 1) comboRef.current = 1
+                
                 playError()
                 playOops()           
                 triggerShake()
             } else {
+                comboRef.current += 0.02 + comboRef.current * 0.01
+
+                if(comboRef.current > maxCombo.current) {
+                    maxCombo.current = comboRef.current
+                }
+
                 playType()
                 playPop()
                 playPaper()
@@ -249,13 +260,19 @@ const displayTypeText = () => {
                 className="flex flex-row opacity-0"
                 autoComplete='off'
             />
+            <div
+                className="flex items-center justify-center text-4xl font-bold tabular-nums transition-all duration-200"
+                style={{
+                    transform: `scale(${1 + (stats.combo - 1) * 0.5})`
+                }}
+                >
+                x{stats.combo.toFixed(2)}
+            </div>
 
             <div className="mt-5">
                 <p>Words Per Minute (WPM): {stats.wpm}</p>
                 <p>Accuracy: {stats.accuracy}</p>
                 <p>Characters Per Second (CPS): {stats.cps}</p>
-                <p>Combo: {stats.combo}</p>
-                <p>Correct Letters Chain: {correctLetterChain}</p>
                 <p>cps * combo: {stats.cpsXcombo}</p>
             </div><br />
 
@@ -267,6 +284,7 @@ const displayTypeText = () => {
                     {juice ? 'Juice On :)' : 'Juice Off :|'}
                 </button>
             </div><br />
+            {/* <Meter percentage={stats.combo > 1 ? stats.combo * 50 : 0}/> */}
             <SoundSettings/>
         </div>
     )

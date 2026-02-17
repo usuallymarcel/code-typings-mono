@@ -27,11 +27,6 @@ export function calculateCharactersPerSecond(startTime: number, input: string, e
     return input.length/seconds
 }
 
-export function calculateMultiplier(lengthOfCorrectChars: number): number {
-    
-    return Math.min(Math.max(lengthOfCorrectChars/50, 1), 2)
-}
-
 export function caluclateCorrectLetterChain(value: string, text: string): number {
     let chain = 0
 

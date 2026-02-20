@@ -1,5 +1,5 @@
+import { execute } from './sql.js'
 import sqlite3 from 'sqlite3'
-import { execute } from './sql'
 
 const db = new sqlite3.Database('typings.db', sqlite3.OPEN_CREATE | sqlite3.OPEN_READWRITE, (err) => {
     if (err) return console.log(err.message)
@@ -8,7 +8,7 @@ const db = new sqlite3.Database('typings.db', sqlite3.OPEN_CREATE | sqlite3.OPEN
 async function createTable() {
     const sql = `CREATE TABLE IF NOT EXISTS text (
         id INTEGER PRIMARY KEY,
-        name TEXT NOT NULL
+        name TEXT NOT NULL,
         text TEXT NOT NULL
     )`
     try {

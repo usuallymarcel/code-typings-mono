@@ -1,4 +1,4 @@
-import { execute } from './sql.js'
+import { run, get } from './sql.js'
 import sqlite3 from 'sqlite3'
 
 const db = new sqlite3.Database('typings.db', sqlite3.OPEN_CREATE | sqlite3.OPEN_READWRITE, (err) => {
@@ -6,17 +6,27 @@ const db = new sqlite3.Database('typings.db', sqlite3.OPEN_CREATE | sqlite3.OPEN
 })
 
 async function createTable() {
-    const sql = `CREATE TABLE IF NOT EXISTS text (
+    const sql = `CREATE TABLE IF NOT EXISTS texts (
         id INTEGER PRIMARY KEY,
-        name TEXT NOT NULL,
+        name TEXT NOT NULL UNIQUE,
         text TEXT NOT NULL
     )`
     try {
-        execute(db, sql)
+        await run(db, sql)
     } catch (error) {
         console.log(error)
-    } finally {
-        db.close()
+    }
+}
+
+export async function getTextByName(name) {
+    const sql = `SELECT * FROM texts WHERE name = ?`
+
+    try {
+        const row = await get(db, sql, [name])
+        return row
+    } catch (error){
+        console.log(error)
+        throw error
     }
 }
 

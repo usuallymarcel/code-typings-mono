@@ -1,4 +1,4 @@
-import { run, get } from './sql.js'
+import { run, get, all } from './sql.js'
 import sqlite3 from 'sqlite3'
 
 const db = new sqlite3.Database('typings.db', sqlite3.OPEN_CREATE | sqlite3.OPEN_READWRITE, (err) => {
@@ -25,13 +25,30 @@ export async function getTextByName(name) {
         const row = await get(db, sql, [name])
         return row
     } catch (error){
-        console.log(error)
-        throw error
+        console.log(error.message)
+    }
+}
+
+export async function getAllText() {
+    try {
+        const rows = await all(db, `SELECT * FROM texts`)
+        return rows
+    } catch (error) {
+        console.log(error.message)
     }
 }
 
 export async function initialiseDb() {
     await createTable()
+}
+
+export async function insertText(filename, content) {
+
+    await run(
+        db, 
+        `INSERT INTO texts (name, text) VALUES (?, ?)`,
+        [filename, content]
+    )
 }
 
 process.on('exit', () => {

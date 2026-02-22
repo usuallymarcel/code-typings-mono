@@ -6,19 +6,25 @@ import { useJuice } from '../juice/useJuice'
 import type { TypingStats } from './utils/stats'
 import { calculateWPM, calculateAccuracy, calculateCharactersPerSecond } from './utils/stats'
 import { useGameLoop } from '../game/useGameLoop'
+import FileUploader from './fileUploader'
+import TextSelector from './textSelector'
 
 export default function Typing() {
     const [input, setInput] = useState<string>("")
     const [startTime, setStartTime] = useState<number | null>(null)
     const [endTime, setEndTime] = useState<number | null>(null)
     const [typingDisabled, setTypingDisabled] = useState(false)
-    const [typeText, setTypeText] = useState<string>('')
     const [shake, setShake] = useState(false)
     const [juice, setJuice] = useJuice()
     const [stats, setStats] = useState<TypingStats>({wpm: 0, accuracy: 100, cps: 0, combo: 0, cpsXcombo: 0})
     const [score, setScore] = useState(0)
     const maxCombo = useRef(0)
     const comboRef = useRef(1)
+    const defaultText = 'Select a text file or upload a new one'
+    const [typeText, setTypeText] = useState<string>(defaultText)
+    const [reloadTexts, setReloadTexts] = useState(0)
+
+
 
     // const { playSound } = useSound()
     const playType = useDebouncedSound('type')
@@ -73,15 +79,6 @@ export default function Typing() {
     }
     }, [typingDisabled])
 
-    useEffect(() => {
-        inputRef.current?.focus()
-        fetch(`${import.meta.env.VITE_API_URL}/text`)
-        .then((res) => res.json())
-        .then((data) => {
-            setTypeText(data.message)
-        })
-    }, [])
-
     const reset = () => {
         setInput("")
         setStartTime(null)
@@ -93,6 +90,15 @@ export default function Typing() {
         setStats({ wpm: 0, accuracy: 0, cps: 0, combo: 0, cpsXcombo: 0})
         setScore(0)
     }
+
+    const handleTextChange = (text: string) => {
+        reset()
+        setTypeText(text)
+    }
+
+    useEffect(() => {
+        inputRef.current?.focus()
+    }, [])
 
     const handleSpace = () => {
         console.log('spacebar')
@@ -137,7 +143,7 @@ export default function Typing() {
         if (value.length > input.length) {
             const i = value.length - 1
             if (value[i] !== typeText[i]) {
-                comboRef.current *= 0.85
+                comboRef.current *= 0.90
                 if (comboRef.current < 1) comboRef.current = 1
                 
                 playError()
@@ -178,7 +184,6 @@ const displayTypeText = () => {
     const elements = []
     const tokens = typeText.match(/\S+\s*/g) || []
     
-    let correctLettersLength = 0
     let globalIndex = 0
 
     for (let w = 0; w < tokens.length; w++) {
@@ -208,11 +213,9 @@ const displayTypeText = () => {
             if (globalIndex < input.length) {
                 if (char === input[globalIndex]) {
                     color = "text-lime-500"
-                    correctLettersLength++
                 } else {
                     color = "text-red-500"
                     letter = input[globalIndex]
-                    correctLettersLength = 0
                 }
             }
 
@@ -283,7 +286,15 @@ const displayTypeText = () => {
                     {juice ? 'Juice On :)' : 'Juice Off :|'}
                 </button>
             </div><br />
+            <TextSelector 
+            onChange={handleTextChange}
+            reloadTrigger={reloadTexts}
+            />
             {/* <Meter percentage={stats.combo > 1 ? stats.combo * 50 : 0}/> */}
+            <FileUploader onUploadSuccess={() => {
+                setReloadTexts(prev => prev + 1)
+            }}/>
+
             <SoundSettings/>
         </div>
     )

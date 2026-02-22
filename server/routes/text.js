@@ -1,6 +1,6 @@
-import { getTextByName } from "../db/schema.js"
+import { getAllText, getTextByName } from "../db/textdb.js"
 
-const getText = async (req, res) => {
+export async function getText(req, res) {
     const { name } = req.query
     
     if (!name) {
@@ -16,4 +16,13 @@ const getText = async (req, res) => {
     res.status(200).json(row)
 }
 
-export default getText
+export async function getTexts(req, res) {
+    
+    const rows = await getAllText()
+
+    if (!rows) {
+        return res.status(404).json({ message: 'Not found' })
+    }
+
+    res.status(200).json(rows)
+}

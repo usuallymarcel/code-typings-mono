@@ -8,6 +8,7 @@ import { calculateWPM, calculateAccuracy, calculateCharactersPerSecond } from '.
 import { useGameLoop } from './hooks/useGameLoop'
 import FileUploader from './components/fileUploader'
 import TextSelector from './components/textSelector'
+import { RandomizeText } from './components/randomizeText'
 
 export default function Typing() {
     const [input, setInput] = useState<string>("")
@@ -23,6 +24,8 @@ export default function Typing() {
     const defaultText = 'Select a text file or upload a new one'
     const [typeText, setTypeText] = useState<string>(defaultText)
     const [reloadTexts, setReloadTexts] = useState(0)
+    const [randomizeText, setRandomizeText] = useState(0)
+    const [useRandomText, setUseRandomText] = useState(true)
 
 
 
@@ -276,7 +279,7 @@ const displayTypeText = () => {
                 <p>Words Per Minute (WPM): {stats.wpm}</p>
                 <p>Accuracy: {stats.accuracy}</p>
                 <p>Characters Per Second (CPS): {stats.cps}</p>
-                <p>cps * combo: {stats.cpsXcombo}</p>
+                {/* <p>cps * combo: {stats.cpsXcombo}</p> */}
             </div><br />
 
             <p>Score: {score}</p><br />
@@ -287,10 +290,18 @@ const displayTypeText = () => {
                     {juice ? 'Juice On :)' : 'Juice Off :|'}
                 </button>
             </div><br />
+            <div className="space-x-10 space-y-2">
+            <RandomizeText 
+            onChange={handleTextChange}
+            reloadTrigger={randomizeText}/>
+            <p>or</p>
             <TextSelector 
             onChange={handleTextChange}
             reloadTrigger={reloadTexts}
             />
+
+            </div>
+
             {/* <Meter percentage={stats.combo > 1 ? stats.combo * 50 : 0}/> */}
             <FileUploader onUploadSuccess={() => {
                 setReloadTexts(prev => prev + 1)

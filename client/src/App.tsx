@@ -1,6 +1,6 @@
 // import { useState } from 'react'
-import Typing from './components/typing'
-import { SoundProvider } from './sound/SoundContext'
+import Typing from './modules/typing'
+import { SoundProvider } from './modules/sound/SoundContext'
 
 function App() {
   // const [count, setCount] = useState(0)

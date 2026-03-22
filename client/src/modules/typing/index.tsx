@@ -2,12 +2,12 @@ import {useEffect, useState, useRef, type ChangeEvent, useCallback } from 'react
 // import { useSound } from '../sound/useSound'
 import { useDebouncedSound } from '../sound/useDebouncedSound'
 import { SoundSettings } from '../sound/SoundSettings'
-import { useJuice } from '../juice/useJuice'
+import { useJuice } from './hooks/useJuice'
 import type { TypingStats } from './utils/stats'
 import { calculateWPM, calculateAccuracy, calculateCharactersPerSecond } from './utils/stats'
-import { useGameLoop } from '../game/useGameLoop'
-import FileUploader from './fileUploader'
-import TextSelector from './textSelector'
+import { useGameLoop } from './hooks/useGameLoop'
+import FileUploader from './components/fileUploader'
+import TextSelector from './components/textSelector'
 
 export default function Typing() {
     const [input, setInput] = useState<string>("")
@@ -297,6 +297,9 @@ const displayTypeText = () => {
             }}/>
 
             <SoundSettings/>
+
+            
+            <p className="my-4 italic text-sm">Press <span className="font-bold">Esc</span> to reset text</p>
         </div>
     )
 }

@@ -73,7 +73,7 @@ function FileUploader({ onUploadSuccess }: {onUploadSuccess: () => void}) {
                     htmlFor='file'
                     className="inline-block px-4 cursor-pointer rounded-xl text-center bg-pink-600 hover:bg-pink-800"
                 >
-                    <p >Choose file to upload</p>
+                    <p >Choose text file to upload</p>
                     <input 
                         className="hidden" 
                         id="file" 

@@ -1,8 +1,13 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 
 function FileUploader({ onUploadSuccess }: {onUploadSuccess: () => void}) {
     const [file, setFile] = useState<File | null>(null)
     const [message, setMessage] = useState<string | null>(null)
+    const [uploadDisabled, setUploadDisabled] = useState(false)
+
+    const KILOBYTE = 1024
+    const MEGABYTE = KILOBYTE * KILOBYTE
+    const MAX_FILE_SIZE = KILOBYTE
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (!e.target.files) return
@@ -17,6 +22,10 @@ function FileUploader({ onUploadSuccess }: {onUploadSuccess: () => void}) {
             setMessage('Incorrect file type')
         }
     }
+
+    useEffect(() => {
+        setUploadDisabled(file?.size ? file.size > MAX_FILE_SIZE : true)
+    }, [file])
 
     async function handleUpload() {
         if (!file) return
@@ -52,19 +61,19 @@ function FileUploader({ onUploadSuccess }: {onUploadSuccess: () => void}) {
     }
 
     function formatSize(size: number) {
-        if (size < 1024) return `${size} B`
-        if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`
-        return `${(size /(1024 * 1024)).toFixed(1)} MB`
+        if (size < KILOBYTE) return `${size} B`
+        if (size < MEGABYTE) return `${(size / KILOBYTE).toFixed(1)} KB`
+        return `${(size /(MEGABYTE)).toFixed(1)} MB`
     }
 
     return (
-        <>
+        <div className="space-y-4 my-4">
             <div>
                 <label
                     htmlFor='file'
-                    className="block cursor-pointer rounded-xl max-w-35 my-4 text-center bg-gray-500 hover:bg-gray-600"
+                    className="inline-block px-4 cursor-pointer rounded-xl text-center bg-pink-600 hover:bg-pink-800"
                 >
-                    <p >Choose file</p>
+                    <p >Choose file to upload</p>
                     <input 
                         className="hidden" 
                         id="file" 
@@ -81,21 +90,25 @@ function FileUploader({ onUploadSuccess }: {onUploadSuccess: () => void}) {
                         <li>Type: {file.type ?? 'Unknown'}</li>
                         <li>Size: {formatSize(file.size)}</li>
                     </ul>
+                    {file.size > MAX_FILE_SIZE && 
+                        <p className="text-red-500">File too large, max size: {formatSize(MAX_FILE_SIZE)}</p>
+                    }
                 </section>
             )}
 
-            {file && (
+            {file && !uploadDisabled && (
                 <button 
-                className="rounded-xl p-1 px-4 my-4 min-w-35 bg-green-500 hover:bg-green-600" 
-                onClick={handleUpload}>
+                className={`rounded-xl px-10 bg-emerald-600 hover:bg-emerald-800`} 
+                onClick={handleUpload}
+                >
                     Upload
                     </button>
             )}
 
             {message && (
-                <p className="my-2 text-gray-400">{message}</p>
+                <p className="text-gray-400">{message}</p>
             )}
-        </>
+        </div>
     )
 }
 

@@ -25,7 +25,7 @@ export default function Typing() {
     const [typeText, setTypeText] = useState<string>(defaultText)
     const [reloadTexts, setReloadTexts] = useState(0)
     const [randomizeText, setRandomizeText] = useState(0)
-    const [useRandomText, setUseRandomText] = useState(true)
+    // const [useRandomText, setUseRandomText] = useState(true)
 
 
 

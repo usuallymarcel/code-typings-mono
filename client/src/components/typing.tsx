@@ -94,6 +94,7 @@ export default function Typing() {
     const handleTextChange = (text: string) => {
         reset()
         setTypeText(text)
+        inputRef.current?.focus()
     }
 
     useEffect(() => {

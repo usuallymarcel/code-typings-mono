@@ -24,10 +24,10 @@ export default function Typing() {
     const defaultText = 'Select a text file or upload a new one'
     const [typeText, setTypeText] = useState<string>(defaultText)
     const [reloadTexts, setReloadTexts] = useState(0)
-    const [randomizeText, setRandomizeText] = useState(0)
+    // const [randomizeText, setRandomizeText] = useState(0)
     // const [useRandomText, setUseRandomText] = useState(true)
-
-
+    const randomizeText = 0
+		
 
     // const { playSound } = useSound()
     const playType = useDebouncedSound('type')

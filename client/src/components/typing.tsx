@@ -9,6 +9,16 @@ import { useGameLoop } from '../game/useGameLoop'
 import FileUploader from './fileUploader'
 import TextSelector from './textSelector'
 
+type Particle = {
+  id: number
+  x: number
+  y: number
+  vx: number
+  vy: number
+  char: string
+  life: number
+}
+
 export default function Typing() {
     const [input, setInput] = useState<string>("")
     const [startTime, setStartTime] = useState<number | null>(null)
@@ -23,8 +33,26 @@ export default function Typing() {
     const defaultText = 'Select a text file or upload a new one'
     const [typeText, setTypeText] = useState<string>(defaultText)
     const [reloadTexts, setReloadTexts] = useState(0)
+    const [particles, setParticles] = useState<Particle[]>([])
 
 
+    const spawnParticles = (x: number, y: number, char: string) => {
+        const newParticles: Particle[] = []
+
+        // for (let i = 0; i < 6; i++) {
+            newParticles.push({
+                id: Math.random(),
+                x,
+                y,
+                vx: (Math.random() - 0.5) * 200,
+                vy: (Math.random() - 0.5) * 200,
+                char,
+                life: 0.5
+            })
+        // }
+
+        setParticles(prev => [...prev, ...newParticles])
+    }
 
     // const { playSound } = useSound()
     const playType = useDebouncedSound('type')
@@ -64,6 +92,16 @@ export default function Typing() {
             })
 
             // setScore(prev => prev + cpsXcombo * dt)
+            setParticles(prev =>
+                prev
+                    .map(p => ({
+                        ...p,
+                        x: p.x + p.vx * dt,
+                        y: p.y + p.vy * dt,
+                        life: p.life - dt
+                    }))
+                    .filter(p => p.life > 0)
+            )
         }
     })
 
@@ -142,6 +180,7 @@ export default function Typing() {
 
         if (value.length > input.length) {
             const i = value.length - 1
+
             if (value[i] !== typeText[i]) {
                 comboRef.current *= 0.90
                 if (comboRef.current < 1) comboRef.current = 1
@@ -154,6 +193,18 @@ export default function Typing() {
 
                 if(comboRef.current > maxCombo.current) {
                     maxCombo.current = comboRef.current
+                }
+
+                const rect = document
+                    .getElementById(`char-${i}`)
+                    ?.getBoundingClientRect()
+
+                if (rect) {
+                    spawnParticles(
+                        rect.left + rect.width / 2,
+                        rect.top + rect.height / 2,
+                        value[i]
+                    )
                 }
 
                 playType()
@@ -202,7 +253,7 @@ const displayTypeText = () => {
             if (globalIndex === input.length - 1) {
                 effect =
                     char === input[globalIndex]
-                        ? `font-bold ${juice ? "animate-juice" : ""}`
+                        ? `font-bold ${juice ? "animate-juice scale-${Math.min(125, 100 + stats.combo * 10)}" : ""}`
                         : ""
             }
 
@@ -221,6 +272,7 @@ const displayTypeText = () => {
 
             letters.push(
                 <span
+                    id={`char-${globalIndex}`}
                     key={`char-${globalIndex}`}
                     className={`${color} inline-block text-2xl leading-relaxed ${effect} ${cursor}`}
                 >
@@ -296,6 +348,22 @@ const displayTypeText = () => {
             }}/>
 
             <SoundSettings/>
+            {particles.map(p => (
+                <span
+                    key={p.id}
+                    className="particle"
+                    style={{
+                        position: "fixed",
+                        left: p.x,
+                        top: p.y,
+                        opacity: p.life * 2,
+                        pointerEvents: "none",
+                        transform: "translate(-50%, -50%)"
+                    }}
+                >
+                    {p.char}
+                </span>
+            ))}
         </div>
     )
 }

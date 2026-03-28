@@ -67,7 +67,7 @@ function FileUploader({ onUploadSuccess }: {onUploadSuccess: () => void}) {
     }
 
     return (
-        <div className="space-y-4 my-4">
+        <div className="flex-col space-y-4 border p-20 text-white bg-neutral-900 rounded-xl">
             <div>
                 <label
                     htmlFor='file'
@@ -83,7 +83,7 @@ function FileUploader({ onUploadSuccess }: {onUploadSuccess: () => void}) {
                 </label>
             </div>
             {file && (
-                <section>
+                <section className='space-y-2'>
                     File details:
                     <ul>
                         <li>Name: {file.name}</li>

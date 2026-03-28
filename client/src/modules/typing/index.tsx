@@ -12,6 +12,14 @@ import { RandomizeText } from './components/randomizeText'
 import { OutlineButton } from '../../components/outline-button'
 import { useModal } from '../../components/modal/ModalContext'
 
+const sizeClasses = [
+    "text-xl",
+    "text-2xl",
+    "text-3xl",
+    "text-4xl",
+    "text-5xl",
+]
+
 export default function Typing() {
     const [input, setInput] = useState<string>("")
     const [startTime, setStartTime] = useState<number | null>(null)
@@ -27,7 +35,8 @@ export default function Typing() {
     const [typeText, setTypeText] = useState<string>(defaultText)
     const [reloadTexts, setReloadTexts] = useState(0)
     const { openModal } = useModal()
-    const [size, setSize] = useState(2)
+    const [size, setSize] = useState<number>(2)
+    const textSizeClass = sizeClasses[size - 1]
 		
 
     // const { playSound } = useSound()
@@ -199,7 +208,7 @@ const displayTypeText = () => {
         for (let i = 0; i < token.length; i++) {
             const char = token[i]
 
-            let color = "text-white-500"
+            let color = "text-white"
             let effect = ""
             let cursor = ""
             let letter = ""
@@ -227,7 +236,7 @@ const displayTypeText = () => {
             letters.push(
                 <span
                     key={`char-${globalIndex}`}
-                    className={`${color} inline-block text-${size}xl leading-relaxed ${effect} ${cursor}`}
+                    className={`${color} inline-block ${textSizeClass} leading-relaxed ${effect} ${cursor}`}
                 >
                     {letter || char}
                 </span>

@@ -1,14 +1,14 @@
 // SoundSettings.tsx
 import { useSound } from './useSound'
 import type { SoundEvent } from './soundEvent'
-import { useState } from 'react'
-import { IoIosArrowDown, IoIosArrowForward } from "react-icons/io";
 import { GoMute, GoUnmute } from "react-icons/go";
+import { OutlineButton } from '../../components/outline-button';
+// import { useModal } from '../../components/modal/ModalContext';
 
 const events: SoundEvent[] = ['type', 'error', 'oops', 'pop', 'paper']
 
 
-export function SoundSettings() {
+export function SoundSettingsModal() {
     const {
         sounds, 
         setVolume,  
@@ -16,21 +16,23 @@ export function SoundSettings() {
         toggleMute, 
     } = useSound()
 
-    const [hide, setHide] = useState<boolean>(true)
+    // const { closeModal } = useModal()
+
+    // const [hide, setHide] = useState<boolean>(true)
 
 
     return (
-        <div className='p-4 bg-neutral-800 rounded max-w-80'>
-            <div className="flex items-center justify-between" onClick={() => setHide(prev => !prev)}>
+        <div className='flex items-center border justify-center p-20 text-white bg-neutral-900 rounded-xl'>
+            {/* <div className="flex items-center justify-between" onClick={closeModal}> */}
 
-
+{/* 
                 <div className="flex gap-2">
                     {hide ? <IoIosArrowForward /> : <IoIosArrowDown />}
-                </div>
-                <h2 className='text-lg'>Sound Settings</h2>
-            </div>
+                </div> */}
+                {/* <h2 className='text-lg'>Sound Settings</h2>
+            </div> */}
 
-            {!hide && (
+            
                 <div className="mt-4">
                     {events.map(event => (
                     <div key={event} className='mt-3'>
@@ -46,11 +48,11 @@ export function SoundSettings() {
                         />
                     </div>
                     ))}
-                    <button onClick={toggleMute} className="mt-4">
-                        {!muted ? <GoUnmute /> : <GoMute />}
-                    </button>
+                    <OutlineButton onClick={toggleMute}>
+                        <span className='flex justify-center py-2'>{!muted ? <GoUnmute /> : <GoMute />}</span>
+                    </OutlineButton>
                 </div>
-            )}
+            
         </div>
     )
 }

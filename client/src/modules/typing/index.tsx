@@ -258,7 +258,7 @@ const displayTypeText = () => {
 
     return (
         <div>
-            <div className="flex flex-wrap justify-between my-5">
+            <div className="flex flex-wrap justify-between items-center my-5">
                 <div className="flex flex-wrap gap-10">
                     <OutlineButton onClick={() => {setSize(prev => Math.max(prev - 1, 1))}} width="50px">-</OutlineButton>
                     <OutlineButton onClick={() => {setSize(prev => Math.min(prev + 1, 5))}} width="50px">+</OutlineButton>

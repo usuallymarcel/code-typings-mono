@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react"
 import { getRandomText } from "../utils/words"
 
-const lengths = [10, 25, 50, 100, 250]
+const lengths = [10, 25, 50, 100]
 
-export function RandomizeText( {onChange, reloadTrigger} : { onChange: (text: string) => void, reloadTrigger: number}) {
+export function RandomizeText( {onChange, reloadTrigger} : { onChange: (text: string) => void, reloadTrigger?: number}) {
     const [randomText, setRandomtext] = useState('')
     const [length, setLength] = useState(25)
     const [randomize, setRandomize] = useState(0)
@@ -14,7 +14,7 @@ export function RandomizeText( {onChange, reloadTrigger} : { onChange: (text: st
 
     useEffect(() => {
         onChange(randomText)
-    }, [randomText])
+    }, [randomText, onChange])
 
     return (
         <>

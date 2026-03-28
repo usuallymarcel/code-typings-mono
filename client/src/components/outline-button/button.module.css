@@ -1,0 +1,31 @@
+.pushable {
+    margin-top: 20px;
+    border-radius: 12px;
+    border: solid 1px;
+    padding: 0;
+    cursor: pointer;
+}
+
+.front {
+    margin-top: 2px;
+    display: block;
+    padding: 0px 20px;
+    border: solid 1px;
+    background: #171717;
+    border-radius: 12px;
+    font-size: 1.25rem;
+    color: white;
+    transform: translateY(-10px) translateX(2px);
+    width: 200px;
+    will-change: transform;
+    transition: transform 20ms;
+}
+
+/* 
+.pushable:hover .front {
+    transform: translateY(-10px) translateX(1px);
+} */
+
+.pushable:active .front {
+    transform: translateY(-2px);
+}

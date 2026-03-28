@@ -1,7 +1,7 @@
 import {useEffect, useState, useRef, type ChangeEvent, useCallback } from 'react'
 // import { useSound } from '../sound/useSound'
 import { useDebouncedSound } from '../sound/useDebouncedSound'
-import { SoundSettings } from '../sound/SoundSettings'
+import { SoundSettingsModal } from '../sound/SoundSettings'
 import { useJuice } from './hooks/useJuice'
 import type { TypingStats } from './utils/stats'
 import { calculateWPM, calculateAccuracy, calculateCharactersPerSecond } from './utils/stats'
@@ -9,6 +9,8 @@ import { useGameLoop } from './hooks/useGameLoop'
 import FileUploader from './components/fileUploader'
 import TextSelector from './components/textSelector'
 import { RandomizeText } from './components/randomizeText'
+import { OutlineButton } from '../../components/outline-button'
+import { useModal } from '../../components/modal/ModalContext'
 
 export default function Typing() {
     const [input, setInput] = useState<string>("")
@@ -24,9 +26,8 @@ export default function Typing() {
     const defaultText = 'Select a text file or upload a new one'
     const [typeText, setTypeText] = useState<string>(defaultText)
     const [reloadTexts, setReloadTexts] = useState(0)
-    // const [randomizeText, setRandomizeText] = useState(0)
-    // const [useRandomText, setUseRandomText] = useState(true)
-    const randomizeText = 0
+    const { openModal } = useModal()
+    const [size, setSize] = useState(2)
 		
 
     // const { playSound } = useSound()
@@ -94,11 +95,11 @@ export default function Typing() {
         setScore(0)
     }
 
-    const handleTextChange = (text: string) => {
+    const handleTextChange = useCallback((text: string) => {
         reset()
         setTypeText(text)
         inputRef.current?.focus()
-    }
+    }, [])
 
     useEffect(() => {
         inputRef.current?.focus()
@@ -141,7 +142,7 @@ export default function Typing() {
         if(value.length === typeText.length) {
             setEndTime(Date.now())
             setTypingDisabled(true)
-            setScore(stats.wpm * stats.accuracy * maxCombo.current)
+            setScore(Math.round(stats.wpm * stats.accuracy * maxCombo.current))
         }
 
         if (value.length > input.length) {
@@ -226,7 +227,7 @@ const displayTypeText = () => {
             letters.push(
                 <span
                     key={`char-${globalIndex}`}
-                    className={`${color} inline-block text-2xl leading-relaxed ${effect} ${cursor}`}
+                    className={`${color} inline-block text-${size}xl leading-relaxed ${effect} ${cursor}`}
                 >
                     {letter || char}
                 </span>
@@ -247,10 +248,21 @@ const displayTypeText = () => {
 
 
     return (
-        <div className="font-mono bg-neutral-900 text-white min-h-screen p-10">
-            {/* <h1>Code Typing</h1> */}
+        <div>
+            <div className="flex flex-wrap justify-between my-5">
+                <div className="flex flex-wrap gap-10">
+                    <OutlineButton onClick={() => {setSize(prev => Math.max(prev - 1, 1))}} width="50px">-</OutlineButton>
+                    <OutlineButton onClick={() => {setSize(prev => Math.min(prev + 1, 5))}} width="50px">+</OutlineButton>
+                </div>
 
-            <div className={`whitespace-pre-wrap max-w-4xl ${shake ? "animate-shake" : ""}`} onClick={() => {
+                <div className="inline-block justify-end min-w-20 max-w-full">
+                <p>WPM: {stats.wpm || '__'}</p>
+                <p>ACC: {stats.accuracy || '__'}</p>
+                {/* <p>Characters Per Second (CPS): {stats.cps}</p> */}
+                {/* <p>cps * combo: {stats.cpsXcombo}</p> */}
+                </div>
+            </div>
+            <div className={`w-full max-w-4xl whitespace-pre-wrap ${shake ? "animate-shake" : ""}`} onClick={() => {
                 inputRef.current?.focus()
             }}>
                 { displayTypeText() }
@@ -274,26 +286,34 @@ const displayTypeText = () => {
                 >
                 x{stats.combo.toFixed(2)}
             </div>
+                <p>Score: {score}</p>
+            <p className="my-4 italic text-sm">Press <span className="font-bold">Esc</span> to reset text</p>
 
-            <div className="mt-5">
-                <p>Words Per Minute (WPM): {stats.wpm}</p>
-                <p>Accuracy: {stats.accuracy}</p>
-                <p>Characters Per Second (CPS): {stats.cps}</p>
-                {/* <p>cps * combo: {stats.cpsXcombo}</p> */}
-            </div><br />
 
-            <p>Score: {score}</p><br />
+            <div className="flex flex-wrap gap-5 justify-center my-5">
+                <div className='flex flex-wrap gap-5 justify-center'>
 
-            <button onClick={reset}>Reset</button>
-            <div>
-                <button onClick={() => setJuice(prev => !prev)}>
-                    {juice ? 'Juice On :)' : 'Juice Off :|'}
-                </button>
-            </div><br />
-            <div className="space-x-10 space-y-2">
+                <OutlineButton onClick={reset}>Reset</OutlineButton>
+                <OutlineButton onClick={() => setJuice(prev => !prev)}>
+                    juice: <span className="inline-block w-8 text-center">{juice ? "ON" : "OFF"}</span>
+                </OutlineButton>
+                </div>
+                <div className='flex flex-wrap gap-5 justify-center'>
+                <OutlineButton onClick={() => openModal(<FileUploader onUploadSuccess={() => {
+                setReloadTexts(prev => prev + 1)
+                }}/>)}>
+                Upload
+                </OutlineButton>
+
+                <OutlineButton onClick={() => openModal(<SoundSettingsModal/>)}>
+                    Sound Settings
+                </OutlineButton>
+                </div>
+            </div>
+
+            <div className="flex flex-wrap justify-center items-center py-4 gap-10">
             <RandomizeText 
-            onChange={handleTextChange}
-            reloadTrigger={randomizeText}/>
+            onChange={handleTextChange}/>
             <p>or</p>
             <TextSelector 
             onChange={handleTextChange}
@@ -303,14 +323,12 @@ const displayTypeText = () => {
             </div>
 
             {/* <Meter percentage={stats.combo > 1 ? stats.combo * 50 : 0}/> */}
-            <FileUploader onUploadSuccess={() => {
-                setReloadTexts(prev => prev + 1)
-            }}/>
 
-            <SoundSettings/>
+            {/* <div className="flex flex-col gap-10"> */}
+
+            {/* </div> */}
 
             
-            <p className="my-4 italic text-sm">Press <span className="font-bold">Esc</span> to reset text</p>
         </div>
     )
 }

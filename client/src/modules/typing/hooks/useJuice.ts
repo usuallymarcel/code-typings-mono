@@ -5,7 +5,7 @@ export function useJuice() {
 
     const [juice, setJuice] = useState<boolean>(() => {
         const juice = localStorage.getItem(JUICE_STORAGE_KEY)
-        return juice ? JSON.parse(juice) : true
+        return juice ? JSON.parse(juice) : false
     })
 
     

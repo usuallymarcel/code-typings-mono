@@ -236,7 +236,7 @@ const displayTypeText = () => {
             letters.push(
                 <span
                     key={`char-${globalIndex}`}
-                    className={`${color} inline-block ${textSizeClass} leading-relaxed ${effect} ${cursor}`}
+                    className={`${color} inline-block ${textSizeClass} ${styles.transitionFont} leading-relaxed ${effect} ${cursor}`}
                 >
                     {letter || char}
                 </span>

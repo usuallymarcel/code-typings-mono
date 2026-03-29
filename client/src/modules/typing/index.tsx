@@ -1,5 +1,4 @@
 import {useEffect, useState, useRef, type ChangeEvent, useCallback } from 'react'
-// import { useSound } from '../sound/useSound'
 import { useDebouncedSound } from '../sound/useDebouncedSound'
 import { SoundSettingsModal } from '../sound/SoundSettings'
 import { useJuice } from './hooks/useJuice'
@@ -11,6 +10,8 @@ import TextSelector from './components/textSelector'
 import { RandomizeText } from './components/randomizeText'
 import { OutlineButton } from '../../components/outline-button'
 import { useModal } from '../../components/modal/ModalContext'
+import { useTextData } from './hooks/useTextData'
+import styles from './styles/typing.module.css'
 
 const sizeClasses = [
     "text-xl",
@@ -27,7 +28,7 @@ export default function Typing() {
     const [typingDisabled, setTypingDisabled] = useState(false)
     const [shake, setShake] = useState(false)
     const [juice, setJuice] = useJuice()
-    const [stats, setStats] = useState<TypingStats>({wpm: 0, accuracy: 100, cps: 0, combo: 0, cpsXcombo: 0})
+    const [stats, setStats] = useState<TypingStats>({wpm: 0, accuracy: 0, cps: 0, combo: 0, cpsXcombo: 0})
     const [score, setScore] = useState(0)
     const maxCombo = useRef(0)
     const comboRef = useRef(1)
@@ -35,8 +36,8 @@ export default function Typing() {
     const [typeText, setTypeText] = useState<string>(defaultText)
     const [reloadTexts, setReloadTexts] = useState(0)
     const { openModal } = useModal()
-    const [size, setSize] = useState<number>(2)
-    const textSizeClass = sizeClasses[size - 1]
+    const [textData, setTextData] = useTextData()
+    const textSizeClass = sizeClasses[textData.fontSize - 1]
 		
 
     // const { playSound } = useSound()
@@ -104,10 +105,13 @@ export default function Typing() {
         setScore(0)
     }
 
-    const handleTextChange = useCallback((text: string) => {
+    const handleTextChange = useCallback((text: string, length?: number) => {
         reset()
         setTypeText(text)
         inputRef.current?.focus()
+        if (length) {
+            setTextData(prev => ({...prev, textLength: length}))
+        }
     }, [])
 
     useEffect(() => {
@@ -260,8 +264,8 @@ const displayTypeText = () => {
         <div>
             <div className="flex flex-wrap justify-between items-center my-5">
                 <div className="flex flex-wrap gap-10">
-                    <OutlineButton onClick={() => {setSize(prev => Math.max(prev - 1, 1))}} width="50px">-</OutlineButton>
-                    <OutlineButton onClick={() => {setSize(prev => Math.min(prev + 1, 5))}} width="50px">+</OutlineButton>
+                    <OutlineButton onClick={() => {setTextData(prev => ({...prev, fontSize:  Math.max(prev.fontSize - 1, 1)}))}} width="50px">-</OutlineButton>
+                    <OutlineButton onClick={() => {setTextData(prev => ({...prev, fontSize: Math.min(prev.fontSize + 1, 5)}))}} width="50px">+</OutlineButton>
                 </div>
 
                 <div className="inline-block justify-end min-w-20 max-w-full">
@@ -322,7 +326,8 @@ const displayTypeText = () => {
 
             <div className="flex flex-wrap justify-center items-center py-4 gap-10">
             <RandomizeText 
-            onChange={handleTextChange}/>
+            onChange={handleTextChange}
+            startLength={textData.textLength}/>
             <p>or</p>
             <TextSelector 
             onChange={handleTextChange}

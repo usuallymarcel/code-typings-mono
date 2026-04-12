@@ -1,0 +1,15 @@
+fastapi-server/
+│
+├── app/
+│   ├── __init__.py
+│   ├── main.py
+│   ├── config.py
+│   ├── models/
+│   ├── routes/
+│   └── migrations/
+│       ├── env.py
+│       └── versions/
+│
+├── alembic.ini
+├── requirements.txt
+└── .venv/

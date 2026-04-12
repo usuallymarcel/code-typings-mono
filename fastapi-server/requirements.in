@@ -1,0 +1,9 @@
+fastapi[standard]>=0.135.3
+pydantic>=2.12.5
+websockets
+sqlalchemy
+psycopg[binary]
+alembic
+pydantic-settings
+python-dotenv
+pip-tools

@@ -6,7 +6,7 @@ from sqlalchemy import pool
 from alembic import context
 
 from app.config import env
-from app.database import Base
+from app.crud import Base
 
 from app.models.session_tokens import Session_Token
 from app.models.users import User

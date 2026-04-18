@@ -5,13 +5,40 @@ services:
     restart: unless-stopped
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.code-typings-server.rule=Host(`typings.marcel.co.nz`) && PathPrefix(`/api`)"
-      - "traefik.http.routers.code-typings-server.entrypoints=websecure"
-      - "traefik.http.routers.code-typings-server.tls=true"
-      - "traefik.http.routers.code-typings-server.tls.certresolver=myresolver"
-      - "traefik.http.services.code-typings-server.loadbalancer.server.port=5000"
-      - "traefik.http.middlewares.code-typings-strip-api.stripprefix.prefixes=/api"
-      - "traefik.http.routers.code-typings-server.middlewares=code-typings-strip-api"
+
+      - "traefik.http.routers.code-typings-node.rule=Host(`typings.marcel.co.nz`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.code-typings-node.entrypoints=websecure"
+      - "traefik.http.routers.code-typings-node.tls=true"
+      - "traefik.http.routers.code-typings-node.tls.certresolver=myresolver"
+
+      - "traefik.http.services.code-typings-node.loadbalancer.server.port=5000"
+
+      - "traefik.http.middlewares.node-strip.stripprefix.prefixes=/api"
+      - "traefik.http.middlewares.typings-ratelimit.ratelimit.average=100"
+      - "traefik.http.middlewares.typings-ratelimit.ratelimit.burst=50"
+      - "traefik.http.middlewares.typings-buffer.buffering.maxRequestBodyBytes=5242880"
+
+      - "traefik.http.routers.code-typings-node.middlewares=typings-ratelimit,typings-buffer,node-strip"
+    networks:
+      - proxy
+
+  fastapi-backend:
+    build: ./fastapi
+    container_name: code-typings-fastapi
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+
+      - "traefik.http.routers.code-typings-fastapi.rule=Host(`typings.marcel.co.nz`) && PathPrefix(`/api/v2`)"
+      - "traefik.http.routers.code-typings-fastapi.entrypoints=websecure"
+      - "traefik.http.routers.code-typings-fastapi.tls=true"
+      - "traefik.http.routers.code-typings-fastapi.tls.certresolver=myresolver"
+
+      - "traefik.http.services.code-typings-fastapi.loadbalancer.server.port=8000"
+
+      - "traefik.http.middlewares.fastapi-strip.stripprefix.prefixes=/api/v2"
+
+      - "traefik.http.routers.code-typings-fastapi.middlewares=typings-ratelimit,typings-buffer,fastapi-strip"
     networks:
       - proxy
 

@@ -41,7 +41,7 @@ def login(data: login_data, response: Response, db: Session = Depends(get_db)):
 
     response.set_cookie(
         key='session_id',
-        value=session_token,
+        value=session_token.id,
         httponly=True,
         secure=True,
         samesite='lax'
@@ -62,7 +62,7 @@ def sign_up(data: signup_data, response: Response, db: Session = Depends(get_db)
 
     response.set_cookie(
         key='session_id',
-        value=session_token,
+        value=session_token.id,
         httponly=True,
         secure=True,
         samesite='lax'

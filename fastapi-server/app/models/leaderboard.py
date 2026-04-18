@@ -7,13 +7,12 @@ from sqlalchemy.orm import Mapped, mapped_column
 from app.database import Base
 
 
-class Session_Tokens(Base):
-    __tablename__ = "session_tokens"
+class Leaderboard(Base):
+    __tablename__ = "leaderboard"
 
-    id: Mapped[str] = mapped_column(
-        String(64),
+    id: Mapped[int] = mapped_column(
+        Integer,
         primary_key=True,
-        index=True
     )
 
     user_id: Mapped[int] = mapped_column(
@@ -23,15 +22,15 @@ class Session_Tokens(Base):
         index=True
     )
 
+    score: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        index=True
+    )
+
     created_at: Mapped[datetime] = mapped_column(
         TIMESTAMP(timezone=True),
         server_default=func.now(),
-        nullable=False
-    )
-
-
-    expires_at: Mapped[datetime] = mapped_column(
-        TIMESTAMP(timezone=True),
         nullable=False
     )
     

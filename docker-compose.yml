@@ -23,7 +23,7 @@ services:
       - proxy
 
   fastapi-backend:
-    build: ./fastapi
+    build: ./fastapi-server
     container_name: code-typings-fastapi
     restart: unless-stopped
     labels:

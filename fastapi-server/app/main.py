@@ -10,6 +10,7 @@ app.include_router(users.router)
 app.include_router(leaderboard.router)
 
 origins = [
+    'http://localhost:5173',
     'http://localhost:8000',
     'https://typings.marcel.co.nz'
 ]

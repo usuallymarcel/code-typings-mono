@@ -13,7 +13,7 @@ router = APIRouter(prefix='/leaderboard', tags=['leaderboard'])
 class CreateEntryRequest(BaseModel):
     score: int
 
-@router.post('/entry')
+@router.post('/')
 def create_entry(request: Request, data: CreateEntryRequest, db: Session = Depends(get_db)):
     session = get_session_from_request(db, request)
 

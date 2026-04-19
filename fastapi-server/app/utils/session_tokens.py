@@ -28,7 +28,7 @@ def get_session_from_request(db: Session, request: Request):
     return session
 
 def refresh_session_if_needed(db: Session, session: Session_Tokens):
-    if session.expires_at - datetime.now(timezone.utc) < timedelta(hour=4):
+    if session.expires_at - datetime.now(timezone.utc) < timedelta(hours=4):
         session.expires_at = datetime.now(timezone.utc) + timedelta(hours=24)
         db.commit()
 

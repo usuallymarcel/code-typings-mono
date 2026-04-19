@@ -3,13 +3,13 @@ import Typing from './modules/typing'
 import { SoundProvider } from './modules/sound/SoundContext'
 import { ModalProvider } from './components/modal/ModalProvider'
 
-function App() {
+function App() {    
   // const [count, setCount] = useState(0)
 
   return (
     <SoundProvider>
         <ModalProvider>
-            <div className="flex max-w-500 items-center justify-center font-mono bg-neutral-900 text-white min-h-screen p-10">
+            <div className="flex max-w-500 items-center justify-center font-mono min-h-screen p-10">
                 <Typing/>
             </div>
         </ModalProvider>

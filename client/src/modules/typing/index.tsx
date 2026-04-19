@@ -5,13 +5,15 @@ import { useJuice } from './hooks/useJuice'
 import type { TypingStats } from './utils/stats'
 import { calculateWPM, calculateAccuracy, calculateCharactersPerSecond } from './utils/stats'
 import { useGameLoop } from './hooks/useGameLoop'
-import FileUploader from './components/fileUploader'
-import TextSelector from './components/textSelector'
+// import FileUploader from './components/fileUploader'
+// import TextSelector from './components/textSelector'
 import { RandomizeText } from './components/randomizeText'
 import { OutlineButton } from '../../components/outline-button'
 import { useModal } from '../../components/modal/ModalContext'
 import { useTextData } from './hooks/useTextData'
 import styles from './styles/typing.module.css'
+import Login from '../login'
+import { Leaderboard } from '../leaderboard'
 
 const sizeClasses = [
     "text-xl",
@@ -34,7 +36,7 @@ export default function Typing() {
     const comboRef = useRef(1)
     const defaultText = 'Select a text file or upload a new one'
     const [typeText, setTypeText] = useState<string>(defaultText)
-    const [reloadTexts, setReloadTexts] = useState(0)
+    // const [reloadTexts, setReloadTexts] = useState(0)
     const { openModal } = useModal()
     const [textData, setTextData] = useTextData()
     const textSizeClass = sizeClasses[textData.fontSize - 1]
@@ -144,7 +146,7 @@ export default function Typing() {
     }, [handleKeyPress])
 
         
-    const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const handleChange = async (e: ChangeEvent<HTMLInputElement>) => {
 
         const value = e.target.value
 
@@ -155,6 +157,14 @@ export default function Typing() {
         if(value.length === typeText.length) {
             setEndTime(Date.now())
             setTypingDisabled(true)
+            await fetch(`${import.meta.env.VITE_FASTAPI_API_URL}/leaderboard`, {
+                method: "POST",
+                credentials: "include",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ 'score': stats.wpm }),
+            })
             setScore(Math.round(stats.wpm * stats.accuracy * maxCombo.current))
         }
 
@@ -290,6 +300,7 @@ const displayTypeText = () => {
                 disabled={typingDisabled}
                 className="flex flex-row opacity-0"
                 autoComplete='off'
+                data-bwignore="1"
             />
             <div
                 className="flex items-center justify-center text-4xl font-bold tabular-nums transition-all duration-200"
@@ -312,15 +323,17 @@ const displayTypeText = () => {
                 </OutlineButton>
                 </div>
                 <div className='flex flex-wrap gap-5 justify-center'>
-                <OutlineButton onClick={() => openModal(<FileUploader onUploadSuccess={() => {
+                {/* <OutlineButton onClick={() => openModal(<FileUploader onUploadSuccess={() => {
                 setReloadTexts(prev => prev + 1)
                 }}/>)}>
                 Upload
-                </OutlineButton>
+                </OutlineButton> */}
 
                 <OutlineButton onClick={() => openModal(<SoundSettingsModal/>)}>
                     Sound Settings
                 </OutlineButton>
+                <OutlineButton onClick={() => openModal(<Login />)}>Login/Sign up</OutlineButton>
+                <OutlineButton onClick={() => openModal(<Leaderboard />)}>Leaderboard</OutlineButton>
                 </div>
             </div>
 
@@ -328,11 +341,11 @@ const displayTypeText = () => {
             <RandomizeText 
             onChange={handleTextChange}
             startLength={textData.textLength}/>
-            <p>or</p>
-            <TextSelector 
+            {/* <p>or</p> */}
+            {/* <TextSelector 
             onChange={handleTextChange}
             reloadTrigger={reloadTexts}
-            />
+            /> */}
 
             </div>
 
@@ -341,7 +354,6 @@ const displayTypeText = () => {
             {/* <div className="flex flex-col gap-10"> */}
 
             {/* </div> */}
-
             
         </div>
     )

@@ -41,6 +41,8 @@ services:
       - "traefik.http.routers.code-typings-fastapi.middlewares=typings-ratelimit,typings-buffer,fastapi-strip"
     networks:
       - proxy
+    env_file:
+      - ./fastapi/.env
 
   client:
     build: ./client

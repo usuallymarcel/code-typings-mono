@@ -1,5 +1,8 @@
-docker compose down
+#!/bin/bash
+set -e
 
-docker rmi code-typings-client
-docker rmi code-typings-fastapi
-docker rmi code-typings-server
+docker compose down --remove-orphans
+
+docker container prune -f
+
+docker image prune -f

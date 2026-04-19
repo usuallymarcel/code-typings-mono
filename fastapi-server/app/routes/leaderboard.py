@@ -13,7 +13,7 @@ router = APIRouter(prefix='/leaderboard', tags=['leaderboard'])
 class CreateEntryRequest(BaseModel):
     score: int
 
-@router.post('/')
+@router.post('')
 def create_entry(request: Request, data: CreateEntryRequest, db: Session = Depends(get_db)):
     session = get_session_from_request(db, request)
 
@@ -33,13 +33,13 @@ def create_entry(request: Request, data: CreateEntryRequest, db: Session = Depen
     
     return {'ok': True, 'message': 'no new entry, new score lower than current', 'entry': entry}
 
-@router.get('/')
+@router.get('')
 def get_leaderboard(db: Session = Depends(get_db)):
 
     return {'ok': True, 'leaderboard': get_entries(db)}
 
 @router.get('/own')
-def get_leaderboard(request: Request, db: Session = Depends(get_db)):
+def get_leaderboard_own(request: Request, db: Session = Depends(get_db)):
     session = get_session_from_request(db, request)
 
-    return {'ok': True, 'leaderboard': get_entries(db, user_id=session.id)}
+    return {'ok': True, 'leaderboard': get_entries(db, user_id=session.user_id)}

@@ -1,3 +1,5 @@
 docker compose down
 
-docker rmi code-typings-mono-client code-typings-mono-backend
+docker rmi code-typings-client
+docker rmi code-typings-fastapi
+docker rmi code-typings-server

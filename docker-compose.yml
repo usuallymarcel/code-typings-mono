@@ -42,7 +42,7 @@ services:
     networks:
       - proxy
     env_file:
-      - ./fastapi/.env
+      - ./fastapi-server/.env
 
   client:
     build: ./client

@@ -1,8 +1,9 @@
 import enum
 
-from sqlalchemy.orm import InstrumentedAttribute, Session
+from sqlalchemy.orm import InstrumentedAttribute, Session, joinedload
 
 from app.models.leaderboard import Leaderboard
+from app.models.users import User
 
 def create_leaderboard_entry(db: Session, user_id: int, score: int):
     entry = Leaderboard(
@@ -30,7 +31,9 @@ def get_entries(
     order_by: InstrumentedAttribute = Leaderboard.score
 ):
     
-    query = db.query(Leaderboard)
+    query = db.query(Leaderboard).options(joinedload(Leaderboard.user).load_only(
+        User.name
+    ))
 
     if user_id is not None:
         query = query.filter(Leaderboard.user_id == user_id)

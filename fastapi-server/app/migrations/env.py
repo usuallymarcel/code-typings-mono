@@ -8,8 +8,8 @@ from alembic import context
 from app.config import env
 from app.database import Base
 
-from app.models.session_tokens import Session_Tokens
-from app.models.users import Users
+from app.models.session_tokens import Session_Token
+from app.models.users import User
 from app.models.leaderboard import Leaderboard
 
 # this is the Alembic Config object, which provides

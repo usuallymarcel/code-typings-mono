@@ -3,6 +3,12 @@ import { useState, useEffect } from "react"
 type LeaderboardEntry = {
     user_id: number
     score: number
+    user: User
+}
+
+type User = {
+    id: number
+    name: string
 }
 
 type res = {
@@ -56,8 +62,7 @@ export function Leaderboard() {
                                 key={entry.user_id}
                                 className={`flex justify-between items-center px-4 rounded-md ${index === 0 ? 'text-yellow-400 font-bold' : index === 1 ? 'text-gray-300' : index === 2 ? 'text-orange-400' : ''}`}
                             >
-                                <span>UUID: {entry.user_id}&emsp;</span>
-                                <span>wpm: {entry.score}</span>
+                                <span>{entry.user.name}: {entry.score}  <span className="font-bold text-gray-400 text-xs">(WPM)</span></span>
                             </div>
                         ))}
                     </div>

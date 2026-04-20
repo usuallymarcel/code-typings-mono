@@ -7,7 +7,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 from app.database import Base
 
 
-class Session_Tokens(Base):
+class Session_Token(Base):
     __tablename__ = "session_tokens"
 
     id: Mapped[str] = mapped_column(

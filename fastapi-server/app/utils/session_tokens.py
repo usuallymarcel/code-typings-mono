@@ -4,7 +4,7 @@ from fastapi import HTTPException, Request, WebSocket
 from sqlalchemy.orm import Session
 
 from app.crud.session_tokens import get_session_token_by_id
-from app.models.session_tokens import Session_Tokens
+from app.models.session_tokens import Session_Token
 
 
 def get_session_from_request(db: Session, request: Request):
@@ -27,7 +27,7 @@ def get_session_from_request(db: Session, request: Request):
 
     return session
 
-def refresh_session_if_needed(db: Session, session: Session_Tokens):
+def refresh_session_if_needed(db: Session, session: Session_Token):
     if session.expires_at - datetime.now(timezone.utc) < timedelta(hours=4):
         session.expires_at = datetime.now(timezone.utc) + timedelta(hours=24)
         db.commit()

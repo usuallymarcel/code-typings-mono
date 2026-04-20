@@ -163,7 +163,7 @@ export default function Typing() {
                 headers: {
                     "Content-Type": "application/json",
                 },
-                body: JSON.stringify({ 'score': stats.wpm }),
+                body: JSON.stringify({ 'score': stats.wpm * (stats.accuracy/100) }),
             })
             setScore(Math.round(stats.wpm * stats.accuracy * maxCombo.current))
         }

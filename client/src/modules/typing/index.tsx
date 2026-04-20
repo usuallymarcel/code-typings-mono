@@ -165,7 +165,8 @@ export default function Typing() {
                 },
                 body: JSON.stringify({ 'score': stats.wpm * (stats.accuracy/100) }),
             })
-            setScore(Math.round(stats.wpm * stats.accuracy * maxCombo.current))
+            // setScore(Math.round(stats.wpm * stats.accuracy * maxCombo.current))
+            setScore(Math.round(stats.wpm * stats.accuracy))
         }
 
         if (value.length > input.length) {

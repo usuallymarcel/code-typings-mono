@@ -311,7 +311,7 @@ const displayTypeText = () => {
                 >
                 x{stats.combo.toFixed(2)}
             </div>
-                <p>Score: {score}</p>
+                <p>WPM * (ACC/100): {score}</p>
             <p className="my-4 italic text-sm">Press <span className="font-bold">Esc</span> to reset text</p>
 
 

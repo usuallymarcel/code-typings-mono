@@ -9,7 +9,7 @@ function App() {
   return (
     <SoundProvider>
         <ModalProvider>
-            <div className="flex max-w-500 items-center justify-center font-mono min-h-screen p-10">
+            <div className="flex items-center justify-center font-mono min-h-screen p-10">
                 <Typing/>
             </div>
         </ModalProvider>

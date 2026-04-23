@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.crud.session_tokens import create_session
 from app.database import get_db
-from app.crud.users import create_user, get_user_by_name
+from app.crud.users import create_user, get_user_by_id, get_user_by_name
 from app.utils.credentials import check_password
 from app.utils.session_tokens import get_session_from_request
 
@@ -74,7 +74,9 @@ def sign_up(data: signup_data, response: Response, db: Session = Depends(get_db)
 def check_session(request: Request, db: Session = Depends(get_db)):
     session = get_session_from_request(db, request)
 
-    return {'verified': True, 'message': 'Session valid', 'expires': session.expires_at}
+    user = get_user_by_id(db, session.user_id)
+
+    return {'verified': True, 'message': 'Session valid', 'user': UserResponse.model_validate(user)}
 
 @router.post('/logout')
 def logout(request: Request, response: Response, db: Session = Depends(get_db)):

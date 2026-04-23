@@ -1,21 +1,11 @@
 import { useState } from "react"
+import { useUser, type res } from "../../utils/User/UserContext"
+import { useModal } from "../../components/modal/ModalContext"
 
 type form = {
     name: string
     email?: string
     password: string
-}
-
-type res = {
-    verified: boolean
-    message: string
-    user?: User
-}
-
-type User = {
-    id: number
-    name: string
-    email: string
 }
 
 export default function Login() {
@@ -29,6 +19,10 @@ export default function Login() {
 
     const [error, setError] = useState<string | null>(null)
     const [success, setSuccess] = useState<string | null>(null)
+
+    const { setUser } = useUser()
+
+    const { closeModal } = useModal()
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setForm({
@@ -79,15 +73,17 @@ export default function Login() {
 
         const data = (await res.json()) as res
 
-        if (!data.verified) {
+        if (!data.verified || !data.user) {
             throw new Error(data.message || "failed")
         }
 
         if (data.verified) {
             setSuccess(data.message)
+            closeModal()
         }
 
-        console.log("Logged in!", data)
+        setUser(data.user)
+
         } catch (err) {
             if (err instanceof Error) {
                 setError(err.message)

@@ -14,6 +14,7 @@ import { useTextData } from './hooks/useTextData'
 import styles from './styles/typing.module.css'
 import Login from '../login'
 import { Leaderboard } from '../leaderboard'
+import { useUser } from '../../utils/User/UserContext'
 
 const sizeClasses = [
     "text-xl",
@@ -48,6 +49,8 @@ export default function Typing() {
     const playPaper = useDebouncedSound('paper')
     const playOops = useDebouncedSound('oops')
     const playError = useDebouncedSound('error')
+
+    const { user, loading, logout } = useUser()
     
     // const typeSpaceSound = useRef(new Audio("/sounds/spacebar.wav"))
 
@@ -273,6 +276,12 @@ const displayTypeText = () => {
 
     return (
         <div>
+            <div className="flex items-center justify-end pr-5">
+            {loading && <p className="pr-5">Loading...</p>}
+            {user?.name && <p className="pr-5">Logged in as: {user?.name}</p>}
+            {user ? <button className="border px-2 rounded-md cursor-pointer hover:bg-gray-800" onClick={logout}>Log out</button> :
+            <button className="border px-2 rounded-md cursor-pointer hover:bg-gray-800" onClick={() => openModal(<Login />)}>Login/Sign up</button>}
+            </div>
             <div className="flex flex-wrap justify-between items-center my-5">
                 <div className="flex flex-wrap gap-10">
                     <OutlineButton onClick={() => {setTextData(prev => ({...prev, fontSize:  Math.max(prev.fontSize - 1, 1)}))}} width="50px">-</OutlineButton>
@@ -333,7 +342,6 @@ const displayTypeText = () => {
                 <OutlineButton onClick={() => openModal(<SoundSettingsModal/>)}>
                     Sound Settings
                 </OutlineButton>
-                <OutlineButton onClick={() => openModal(<Login />)}>Login/Sign up</OutlineButton>
                 <OutlineButton onClick={() => openModal(<Leaderboard />)}>Leaderboard</OutlineButton>
                 </div>
             </div>

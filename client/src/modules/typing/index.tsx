@@ -110,14 +110,12 @@ export default function Typing() {
         setScore(0)
     }
 
-    const handleTextChange = useCallback((text: string, length?: number) => {
+    const handleTextChange = useCallback((text: string, length: number) => {
         reset()
         setTypeText(text)
         inputRef.current?.focus()
-        if (length) {
-            setTextData(prev => ({...prev, textLength: length}))
-        }
-    }, [])
+        setTextData(prev => ({...prev, textLength: length}))
+    }, [setTextData])
 
     useEffect(() => {
         inputRef.current?.focus()
@@ -166,7 +164,7 @@ export default function Typing() {
                 headers: {
                     "Content-Type": "application/json",
                 },
-                body: JSON.stringify({ 'score': stats.wpm * (stats.accuracy/100) }),
+                body: JSON.stringify({ 'score': Math.round(stats.wpm * (stats.accuracy/100)), 'category': textData.textLength.toString() }),
             })
             // setScore(Math.round(stats.wpm * stats.accuracy * maxCombo.current))
             setScore(Math.round(stats.wpm * (stats.accuracy/100)))

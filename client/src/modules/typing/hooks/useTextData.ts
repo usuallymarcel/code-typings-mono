@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import { lengths } from "../components/randomizeText"
+import { lengths } from "../components/constants"
 
 type TextData = {
     fontSize: number

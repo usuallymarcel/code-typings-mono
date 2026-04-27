@@ -1,8 +1,10 @@
 import { useState, useEffect } from "react"
+import { lengths } from "../typing/components/constants"
 
 type LeaderboardEntry = {
     user_id: number
     score: number
+    category: string
     user: User
 }
 
@@ -16,16 +18,18 @@ type res = {
     leaderboard: LeaderboardEntry[]
 }
 
-export function Leaderboard() {
+export function Leaderboard({length}: {length?: number}) {
     const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[] | null>(null)
     const [error, setError] = useState<string | null>(null)
+    const [selected, setSelected] = useState(length ?? 10)
 
     useEffect(() => {
         const fetchLeaderboard = async () => {
             try {
-                const res = await fetch(
-                    `${import.meta.env.VITE_FASTAPI_API_URL}/leaderboard`
-                )
+                const url = new URL(`${import.meta.env.VITE_FASTAPI_API_URL}/leaderboard`)
+                url.searchParams.append('category', selected.toString())
+
+                const res = await fetch(url)
 
                 const data = (await res.json()) as res
 
@@ -38,7 +42,7 @@ export function Leaderboard() {
         }
 
         fetchLeaderboard()
-    }, [])
+    }, [selected])
 
     return (
         <div className='flex items-center justify-center p-20 text-white bg-neutral-900 rounded-xl border'>
@@ -56,7 +60,13 @@ export function Leaderboard() {
                 )}
 
                 {leaderboard && (
+                    
                     <div className="space-y-2">
+                        <div className="flex justify-between">
+                        {lengths.map((len) => (
+                            <p className={`${len === selected ? 'underline' : ''} cursor-pointer`} onClick={() => setSelected(len)}>{len}</p>
+                        ))}
+                        </div>
                         {leaderboard.map((entry, index) => (
                             <div
                                 key={entry.user_id}

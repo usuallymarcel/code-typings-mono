@@ -12,31 +12,31 @@ router = APIRouter(prefix='/leaderboard', tags=['leaderboard'])
 
 class CreateEntryRequest(BaseModel):
     score: int
+    category: str
 
 @router.post('')
 def create_entry(request: Request, data: CreateEntryRequest, db: Session = Depends(get_db)):
     session = get_session_from_request(db, request)
 
-    entry = get_entry_by_user_id(db, session.user_id)
+    entry = get_entry_by_user_id(db, session.user_id, data.category)
 
     
     if not entry:
-        entry = create_leaderboard_entry(db, session.user_id, data.score)
+        entry = create_leaderboard_entry(db, session.user_id, data.score, data.category)
         return {'ok': True, 'message': 'new entry created', 'entry': entry}
 
 
     if entry.score < data.score:
         db.delete(entry)
         db.commit()
-        entry = create_leaderboard_entry(db, session.user_id, data.score)
+        entry = create_leaderboard_entry(db, session.user_id, data.score, data.category)
         return {'ok': True, 'message': 'new entry created', 'entry': entry}
     
     return {'ok': True, 'message': 'no new entry, new score lower than current', 'entry': entry}
 
 @router.get('')
-def get_leaderboard(db: Session = Depends(get_db)):
-
-    return {'ok': True, 'leaderboard': get_entries(db)}
+def get_leaderboard(category: str = '10', db: Session = Depends(get_db)):
+    return {'ok': True, 'leaderboard': get_entries(db, category)}
 
 @router.get('/own')
 def get_leaderboard_own(request: Request, db: Session = Depends(get_db)):

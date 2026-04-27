@@ -61,7 +61,7 @@ export function Leaderboard({length}: {length?: number}) {
 
                 {leaderboard && (
                     
-                    <div className="space-y-2">
+                    <div className="space-y-2 w-50 min-h-50">
                         <div className="flex justify-between">
                         {lengths.map((len) => (
                             <p className={`${len === selected ? 'underline' : ''} cursor-pointer`} onClick={() => setSelected(len)}>{len}</p>

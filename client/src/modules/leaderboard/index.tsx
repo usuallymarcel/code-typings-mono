@@ -30,7 +30,6 @@ export function Leaderboard({length}: {length?: number}) {
                 const baseUrl = serverUrl.includes('localhost') ? '' : window.location.href
                 const url = new URL(`${baseUrl + serverUrl}/leaderboard`)
 
-                console.log(url.toString())
                 url.searchParams.append('category', selected.toString())
 
                 const res = await fetch(url)
@@ -68,7 +67,7 @@ export function Leaderboard({length}: {length?: number}) {
                     <div className="space-y-2 w-50 min-h-50">
                         <div className="flex justify-between">
                         {lengths.map((len) => (
-                            <p className={`${len === selected ? 'underline' : ''} cursor-pointer`} onClick={() => setSelected(len)}>{len}</p>
+                            <p key={`leaderboard-${len}`} className={`${len === selected ? 'underline' : ''} cursor-pointer`} onClick={() => setSelected(len)}>{len}</p>
                         ))}
                         </div>
                         {leaderboard.map((entry, index) => (

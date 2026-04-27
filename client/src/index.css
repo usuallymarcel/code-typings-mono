@@ -35,3 +35,9 @@ body {
     background-color: var(--color-neutral-900);
     color: var(--color-white)
 }
+
+.typingInput {
+  position: fixed;
+  top: 0;
+  opacity: 0;
+}

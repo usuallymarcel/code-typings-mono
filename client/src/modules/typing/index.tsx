@@ -293,7 +293,7 @@ const displayTypeText = () => {
                 {/* <p>cps * combo: {stats.cpsXcombo}</p> */}
                 </div>
             </div>
-            <div className={`w-full max-w-4xl whitespace-pre-wrap ${shake ? "animate-shake" : ""}`} onClick={() => {
+            <div className={`py-8 w-full max-w-4xl whitespace-pre-wrap ${shake ? "animate-shake" : ""}`} onClick={() => {
                 inputRef.current?.focus()
             }}>
                 { displayTypeText() }
@@ -306,18 +306,18 @@ const displayTypeText = () => {
                 onChange={handleChange}
                 spellCheck={false}
                 disabled={typingDisabled}
-                className="flex flex-row opacity-0"
+                className="typingInput"
                 autoComplete='off'
                 data-bwignore="1"
             />
-            <div
+            {/* <div
                 className="flex items-center justify-center text-4xl font-bold tabular-nums transition-all duration-200"
                 style={{
                     transform: `scale(${1 + (stats.combo - 1) * 0.5})`
                 }}
                 >
                 x{stats.combo.toFixed(2)}
-            </div>
+            </div> */}
                 <p>WPM * (ACC/100): {score}</p>
             <p className="my-4 italic text-sm">Press <span className="font-bold">Esc</span> to reset text</p>
 

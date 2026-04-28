@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react"
+import { useUser } from "../../../utils/User/UserContext"
 
 type PointsResponse = {ok: boolean, points: { user_id: number, id: number, points: number}}
 
@@ -11,6 +12,9 @@ export function usePoints() {
     const [points, setPoints] = useState<number | null>(null)
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<Error | null>(null)
+
+    const {user} = useUser()
+    
 
     
     const fetchPoints = useCallback(async () => {
@@ -42,6 +46,12 @@ export function usePoints() {
             setLoading(false)
         }
     }, [])
+
+    useEffect(() => {
+        if (user) {
+            fetchPoints()
+        }
+    }, [user, fetchPoints])
     
 
     const updatePoints = async (score: number, category: string) => {

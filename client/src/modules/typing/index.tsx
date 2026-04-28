@@ -15,6 +15,7 @@ import styles from './styles/typing.module.css'
 import Login from '../login'
 import { Leaderboard } from '../leaderboard'
 import { useUser } from '../../utils/User/UserContext'
+import { useLeaderboardEntry } from '../leaderboard/hooks/useLeaderboardEntry'
 
 const sizeClasses = [
     "text-xl",
@@ -37,7 +38,6 @@ export default function Typing() {
     const comboRef = useRef(1)
     const defaultText = 'Select a text file or upload a new one'
     const [typeText, setTypeText] = useState<string>(defaultText)
-    // const [reloadTexts, setReloadTexts] = useState(0)
     const { openModal } = useModal()
     const [textData, setTextData] = useTextData()
     const textSizeClass = sizeClasses[textData.fontSize - 1]
@@ -51,6 +51,7 @@ export default function Typing() {
     const playError = useDebouncedSound('error')
 
     const { user, loading, logout } = useUser()
+    const { sendLeaderboardEntry } = useLeaderboardEntry()
     
     // const typeSpaceSound = useRef(new Audio("/sounds/spacebar.wav"))
 
@@ -156,18 +157,16 @@ export default function Typing() {
         }
 
         if(value.length === typeText.length) {
+            const score = Math.round(stats.wpm * (stats.accuracy/100))
+            const category = textData.textLength.toString()
+            
             setEndTime(Date.now())
             setTypingDisabled(true)
-            await fetch(`${import.meta.env.VITE_FASTAPI_API_URL}/leaderboard`, {
-                method: "POST",
-                credentials: "include",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({ 'score': Math.round(stats.wpm * (stats.accuracy/100)), 'category': textData.textLength.toString() }),
-            })
+            if (user) {
+                sendLeaderboardEntry(score, category)
+            }
             // setScore(Math.round(stats.wpm * stats.accuracy * maxCombo.current))
-            setScore(Math.round(stats.wpm * (stats.accuracy/100)))
+            setScore(score)
         }
 
         if (value.length > input.length) {

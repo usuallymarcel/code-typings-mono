@@ -6,6 +6,20 @@ from sqlalchemy.orm import Session
 from app.crud.session_tokens import get_session_token_by_id
 from app.models.session_tokens import Session_Token
 
+def check_session_token(db: Session, token_id: str):
+    token = get_session_token_by_id(db, token_id)
+
+    if not token:
+        raise HTTPException(status_code=400, detail="Invalid Token")
+
+    if token.expires_at < datetime.now(timezone.utc):
+        db.delete(token)
+        db.commit()
+        raise HTTPException(status_code=400, detail="Expired token")
+    
+    db.delete(token)
+    db.commit()
+
 
 def get_session_from_request(db: Session, request: Request):
     session_id = request.cookies.get('session_id')

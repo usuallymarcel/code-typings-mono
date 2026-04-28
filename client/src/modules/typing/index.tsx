@@ -347,7 +347,8 @@ const displayTypeText = () => {
                     Sound Settings
                 </OutlineButton>
                 <OutlineButton onClick={() => openModal(<Leaderboard />)}>Leaderboard</OutlineButton>
-                <OutlineButton onClick={() => openModal(<Gamble />)}>Gamble :)</OutlineButton>
+
+                {user && <OutlineButton onClick={() => openModal(<Gamble />)}>Gamble :)</OutlineButton>}
                 </div>
             </div>
 

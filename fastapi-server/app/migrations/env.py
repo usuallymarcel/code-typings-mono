@@ -11,6 +11,7 @@ from app.database import Base
 from app.models.session_tokens import Session_Token
 from app.models.users import User
 from app.models.leaderboard import Leaderboard
+from app.models.user_points import User_Point
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

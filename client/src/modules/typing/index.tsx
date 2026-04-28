@@ -16,6 +16,8 @@ import Login from '../login'
 import { Leaderboard } from '../leaderboard'
 import { useUser } from '../../utils/User/UserContext'
 import { useLeaderboardEntry } from '../leaderboard/hooks/useLeaderboardEntry'
+import Gamble from '../points'
+import { usePointsContext } from '../points/contexts/PointsContext'
 
 const sizeClasses = [
     "text-xl",
@@ -52,6 +54,7 @@ export default function Typing() {
 
     const { user, loading, logout } = useUser()
     const { sendLeaderboardEntry } = useLeaderboardEntry()
+    const { fetchPoints, points, updatePoints } = usePointsContext()
     
     // const typeSpaceSound = useRef(new Audio("/sounds/spacebar.wav"))
 
@@ -163,7 +166,9 @@ export default function Typing() {
             setEndTime(Date.now())
             setTypingDisabled(true)
             if (user) {
-                sendLeaderboardEntry(score, category)
+                await sendLeaderboardEntry(score, category)
+                await updatePoints(score, category)
+                await fetchPoints()
             }
             // setScore(Math.round(stats.wpm * stats.accuracy * maxCombo.current))
             setScore(score)
@@ -318,6 +323,8 @@ const displayTypeText = () => {
                 x{stats.combo.toFixed(2)}
             </div> */}
                 <p>WPM * (ACC/100): {score}</p>
+                <p>Points: {points}</p>
+                
             <p className="my-4 italic text-sm">Press <span className="font-bold">Esc</span> to reset text</p>
 
 
@@ -340,6 +347,7 @@ const displayTypeText = () => {
                     Sound Settings
                 </OutlineButton>
                 <OutlineButton onClick={() => openModal(<Leaderboard />)}>Leaderboard</OutlineButton>
+                <OutlineButton onClick={() => openModal(<Gamble />)}>Gamble :)</OutlineButton>
                 </div>
             </div>
 

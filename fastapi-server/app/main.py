@@ -1,13 +1,14 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import env
-from app.routes import users
+from app.routes import points, users
 from app.routes import leaderboard
 
 app = FastAPI()
 
 app.include_router(users.router)
 app.include_router(leaderboard.router)
+app.include_router(points.router)
 
 origins = [
     'http://localhost:5173',

@@ -60,6 +60,8 @@ export const SoundProvider = ({ children }: { children: React.ReactNode }) => {
 
         if (!audio) {
             audio = new Audio(src)
+            audio.preload = 'auto'
+            audio.load()
             audioCache.current.set(src, audio)
         }
 

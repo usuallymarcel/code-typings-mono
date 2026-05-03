@@ -4,7 +4,14 @@ from app.models.user_points import User_Point
 
 
 def get_points_by_user_id(db: Session, user_id: str):
-    return db.query(User_Point).filter(User_Point.user_id == user_id).first()
+
+    points = db.query(User_Point).filter(User_Point.user_id == user_id).first()
+
+    if not points:
+        points = create_points(db, user_id)
+
+    return points
+
 
 def update_user_points(db: Session, user_id: str, points: int):
     db.query(User_Point).filter(User_Point.user_id == user_id).update({User_Point.points: points})

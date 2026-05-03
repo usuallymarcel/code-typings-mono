@@ -16,7 +16,6 @@
     font-size: 1.25rem;
     color: white;
     transform: translateY(-10px) translateX(2px);
-    width: 200px;
     will-change: transform;
     transition: transform 20ms;
 }

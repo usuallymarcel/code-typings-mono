@@ -26,9 +26,6 @@ def get_points(request: Request, db = Depends(get_db)):
 
     points = get_points_by_user_id(db, session.user_id)
 
-    if not points:
-        points = create_points(db, session.user_id)
-
     return {'ok': True, 'points': points}
 
 @router.post('')
@@ -37,9 +34,6 @@ def update_points(request: Request, data: UpdatePointsRequest, db = Depends(get_
     check_session_token(db, data.token)
 
     points = get_points_by_user_id(db, session.user_id)
-
-    if not points:
-        points = create_points(db, session.user_id)
 
     multiplier = 10
     if (data.category.isdigit()):
@@ -54,12 +48,9 @@ def flip_coin(request: Request, data: CoinFlipResquest, db = Depends(get_db)):
 
     points = get_points_by_user_id(db, session.user_id)
 
-    if not points:
-        points = create_points(db, session.user_id)
-
     rand = random.randint(0, 1)
 
-    if (rand == 1 and not data.heads or rand == 0 and data.heads):
+    if (rand == 1 and not data.heads or rand == 0 and data.heads):      
         newPoints = round(points.points/2)
         update_user_points(db, session.user_id, newPoints)
         return {'ok': True, 'win': False, 'points': newPoints}

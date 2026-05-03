@@ -20,6 +20,8 @@ type Game = {
   bet_amount: number;
 };
 
+/* ---------------- CARD ---------------- */
+
 function CardView({ card }: { card: Card }) {
   const suitSymbol = {
     hearts: "♥",
@@ -42,8 +44,7 @@ function CardView({ card }: { card: Card }) {
   );
 }
 
-const normalizePoints = (p: any) =>
-  typeof p === "object" ? p.points : p;
+/* ---------------- MAIN ---------------- */
 
 export default function Blackjack() {
   const { points, setPoints } = usePointsContext();
@@ -53,15 +54,22 @@ export default function Blackjack() {
   const [loading, setLoading] = useState(false);
 
   const [displayPoints, setDisplayPoints] = useState(points);
+
+  // dealer animation
+  const [visibleDealerCount, setVisibleDealerCount] = useState(1);
   const [revealDealer, setRevealDealer] = useState(false);
 
   const isFinished = game?.status === "finished";
   const isActive = game?.status === "active";
 
+  /* ---------------- FETCH GAME ---------------- */
+
   async function fetchGame() {
-    const res = await fetch(`${import.meta.env.VITE_FASTAPI_API_URL}/blackjack`, {
-      credentials: "include",
-    });
+    const res = await fetch(
+      `${import.meta.env.VITE_FASTAPI_API_URL}/blackjack`,
+      { credentials: "include" }
+    );
+
     const data = await res.json();
     if (data.ok) setGame(data.game);
   }
@@ -70,17 +78,20 @@ export default function Blackjack() {
     fetchGame();
   }, []);
 
+  /* ---------------- POINT ANIMATION ---------------- */
+
   useEffect(() => {
     if (points === null) return;
 
-    let start = displayPoints ?? points;
-    let end = points;
+    const start = displayPoints ?? points;
+    const end = points;
 
     if (start === end) return;
 
-    const steps = 20;
     let current = start;
     let i = 0;
+
+    const steps = 20;
 
     const interval = setInterval(() => {
       i++;
@@ -97,16 +108,22 @@ export default function Blackjack() {
     return () => clearInterval(interval);
   }, [points]);
 
+  /* ---------------- START GAME ---------------- */
+
   async function startGame() {
     setLoading(true);
     setRevealDealer(false);
+    setVisibleDealerCount(1);
 
-    const res = await fetch(`${import.meta.env.VITE_FASTAPI_API_URL}/blackjack/start`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      body: JSON.stringify({ bet_amount: bet }),
-    });
+    const res = await fetch(
+      `${import.meta.env.VITE_FASTAPI_API_URL}/blackjack/start`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ bet_amount: bet }),
+      }
+    );
 
     const data = await res.json();
 
@@ -118,48 +135,79 @@ export default function Blackjack() {
     setLoading(false);
   }
 
+  /* ---------------- ACTIONS ---------------- */
+
   async function action(type: "hit" | "stand") {
-    const res = await fetch(`${import.meta.env.VITE_FASTAPI_API_URL}/blackjack`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      body: JSON.stringify({ action: type }),
-    });
+    const res = await fetch(
+      `${import.meta.env.VITE_FASTAPI_API_URL}/blackjack`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ action: type }),
+      }
+    );
 
     const data = await res.json();
-
     if (!data.ok) return;
 
     setGame(data.game);
 
     if (data.game.status === "finished") {
       setRevealDealer(true);
+      setVisibleDealerCount(1);
 
-      const p = await fetch(`${import.meta.env.VITE_FASTAPI_API_URL}/points`, {
-        credentials: "include",
-      });
+      const p = await fetch(
+        `${import.meta.env.VITE_FASTAPI_API_URL}/points`,
+        { credentials: "include" }
+      );
 
-      const data = await p.json()
-
-      setPoints(data.points.points);
+      const pData = await p.json();
+      setPoints(pData.points.points);
     }
   }
+
+  /* ---------------- DEALER ANIMATION ---------------- */
+
+  useEffect(() => {
+    if (!isFinished || !game?.dealer_hand) return;
+
+    setVisibleDealerCount(1);
+
+    let i = 1;
+
+    const interval = setInterval(() => {
+      i++;
+      setVisibleDealerCount(i);
+
+      if (i >= game.dealer_hand.length) {
+        clearInterval(interval);
+      }
+    }, 500);
+
+    return () => clearInterval(interval);
+  }, [isFinished, game?.dealer_hand]);
+
+  /* ---------------- RESET ---------------- */
 
   function resetRound() {
     setGame(null);
     setRevealDealer(false);
+    setVisibleDealerCount(1);
   }
 
+  /* ---------------- UI ---------------- */
+
   return (
-    <div className="flex items-center justify-center p-10 text-white bg-neutral-900 rounded-xl">
+    <div className="flex items-center justify-center p-10 text-white bg-neutral-900 rounded-xl border">
       <div className="flex flex-col gap-4 w-85">
 
-        {/* Points */}
+        {/* POINTS */}
         <div className="text-center text-2xl font-bold">
           {displayPoints ?? 0} pts
         </div>
 
-        {/* START SCREEN (only when no active game) */}
+        {/* START SCREEN */}
         {!game && (
           <div className="flex flex-col gap-2">
             <input
@@ -175,29 +223,45 @@ export default function Blackjack() {
           </div>
         )}
 
-        {/* GAME SCREEN (active OR finished) */}
+        {/* GAME SCREEN */}
         {game && (
           <>
-            {/* Dealer */}
+            {/* DEALER */}
             <div>
               <p className="text-sm opacity-70">Dealer</p>
-              <div className="flex gap-2">
-                {game.dealer_hand.map((c, i) => {
-                  const hidden = i === 1 && isActive && !revealDealer;
 
-                  return hidden ? (
+              <div className="flex gap-2">
+                {game.dealer_hand.map((card, i) => {
+                  const hiddenHoleCard =
+                    i === 1 && isActive && !revealDealer;
+
+                  const visible =
+                    isFinished
+                      ? i < visibleDealerCount
+                      : !hiddenHoleCard;
+
+                  if (!visible) {
+                    return (
+                      <div
+                        key={i}
+                        className="w-10 h-14 rounded bg-neutral-700 shadow-inner"
+                      />
+                    );
+                  }
+
+                  return (
                     <div
                       key={i}
-                      className="w-10 h-14 rounded bg-neutral-700 shadow-inner"
-                    />
-                  ) : (
-                    <CardView key={i} card={c} />
+                      className={isFinished ? "animate-dealer-card" : ""}
+                    >
+                      <CardView card={card} />
+                    </div>
                   );
                 })}
               </div>
             </div>
 
-            {/* Player */}
+            {/* PLAYER */}
             <div>
               <p className="text-sm opacity-70">You</p>
               <div className="flex gap-2">
@@ -207,14 +271,14 @@ export default function Blackjack() {
               </div>
             </div>
 
-            {/* Result (only when finished) */}
+            {/* RESULT */}
             {isFinished && (
               <p className="text-center text-lg font-bold">
                 {game.result?.toUpperCase()}
               </p>
             )}
 
-            {/* Actions */}
+            {/* ACTIONS */}
             {isActive && (
               <div className="flex gap-2 justify-center">
                 <OutlineButton onClick={() => action("hit")}>
@@ -226,7 +290,7 @@ export default function Blackjack() {
               </div>
             )}
 
-            {/* NEW ROUND BUTTON */}
+            {/* NEW GAME */}
             {isFinished && (
               <div className="flex justify-center">
                 <OutlineButton onClick={resetRound}>

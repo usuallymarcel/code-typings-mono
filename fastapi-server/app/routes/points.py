@@ -17,8 +17,8 @@ class UpdatePointsRequest(BaseModel):
     category: str
     token: str
 
-class CoinFlipResquest(BaseModel):
-    heads: bool
+# class CoinFlipResquest(BaseModel):
+#     heads: bool
 
 @router.get('')
 def get_points(request: Request, db = Depends(get_db)):
@@ -42,22 +42,22 @@ def update_points(request: Request, data: UpdatePointsRequest, db = Depends(get_
     newPoints: int = points.points + data.score * multiplier
     update_user_points(db, session.user_id, newPoints)
 
-@router.post('/flip_coin')
-def flip_coin(request: Request, data: CoinFlipResquest, db = Depends(get_db)):
-    session = get_session_from_request(db, request)
+# @router.post('/flip_coin')
+# def flip_coin(request: Request, data: CoinFlipResquest, db = Depends(get_db)):
+#     session = get_session_from_request(db, request)
 
-    points = get_points_by_user_id(db, session.user_id)
+#     points = get_points_by_user_id(db, session.user_id)
 
-    rand = random.randint(0, 1)
+#     rand = random.randint(0, 1)
 
-    if (rand == 1 and not data.heads or rand == 0 and data.heads):      
-        newPoints = round(points.points/2)
-        update_user_points(db, session.user_id, newPoints)
-        return {'ok': True, 'win': False, 'points': newPoints}
-    else: 
-        newPoints = round(points.points*2)
-        update_user_points(db, session.user_id, newPoints)
-        return {'ok': True, 'win': True, 'points': newPoints}
+#     if (rand == 1 and not data.heads or rand == 0 and data.heads):      
+#         newPoints = round(points.points/2)
+#         update_user_points(db, session.user_id, newPoints)
+#         return {'ok': True, 'win': False, 'points': newPoints}
+#     else: 
+#         newPoints = round(points.points*2)
+#         update_user_points(db, session.user_id, newPoints)
+#         return {'ok': True, 'win': True, 'points': newPoints}
 
 
     

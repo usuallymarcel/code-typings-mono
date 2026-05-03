@@ -66,7 +66,7 @@ class Blackjack(Base):
             name="game_result_enum",
             values_callable=lambda enum: [e.value for e in enum],
         ),
-        nullable=False
+        nullable=True
     )
 
     created_at: Mapped[datetime] = mapped_column(

@@ -18,6 +18,8 @@ import { useUser } from '../../utils/User/UserContext'
 import { useLeaderboardEntry } from '../leaderboard/hooks/useLeaderboardEntry'
 import Gamble from '../points'
 import { usePointsContext } from '../points/contexts/PointsContext'
+import { useTheme } from '../../utils/Theme/ThemeContext'
+import { ThemeShop } from '../store'
 
 const sizeClasses = [
     "text-xl",
@@ -55,6 +57,8 @@ export default function Typing() {
     const { user, loading, logout } = useUser()
     const { sendLeaderboardEntry } = useLeaderboardEntry()
     const { fetchPoints, points, updatePoints } = usePointsContext()
+
+    const { themes, theme, changeTheme } = useTheme();
     
     // const typeSpaceSound = useRef(new Audio("/sounds/spacebar.wav"))
 
@@ -349,6 +353,7 @@ const displayTypeText = () => {
                 <OutlineButton onClick={() => openModal(<Leaderboard />)}>Leaderboard</OutlineButton>
 
                 {user && <OutlineButton onClick={() => openModal(<Gamble />)}>Gamble :)</OutlineButton>}
+                {user && <OutlineButton onClick={() => openModal(<ThemeShop />)}>Themes</OutlineButton>}
                 </div>
             </div>
 
@@ -369,6 +374,18 @@ const displayTypeText = () => {
             {/* <div className="flex flex-col gap-10"> */}
 
             {/* </div> */}
+
+            {user && <select
+                value={theme}
+                onChange={(e) => changeTheme(e.target.value)}
+                className="p-2 border rounded"
+            >
+                {themes.map((t) => (
+                    <option key={t} value={t} className='bg-black'>
+                        {t.charAt(0).toUpperCase() + t.slice(1)}
+                    </option>
+                ))}
+            </select>}
             
         </div>
     )

@@ -13,6 +13,7 @@ from app.models.users import User
 from app.models.leaderboard import Leaderboard
 from app.models.user_points import User_Point
 from app.models.blackjack import Blackjack
+from app.models.user_themes import User_Theme
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

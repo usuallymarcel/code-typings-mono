@@ -1,5 +1,3 @@
 docker compose down --remove-orphans
 
-docker container prune -f
-
-docker image prune -f
+docker rmi code-typings-mono-fastapi-backend code-typings-mono-client code-typings-mono-backend 

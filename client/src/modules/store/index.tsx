@@ -87,11 +87,11 @@ export function ThemeShop() {
                 )}
 
                 {themes && (
-                    <div className="flex flex-col items-center w-80">
+                    <div className="flex flex-col items-center">
                         {themes.map((theme) => (
                             <div
                             key={theme.name}
-                            className="grid grid-cols-3 w-full px-2 items-center"
+                            className="grid grid-cols-3 gap-2 w-full px-2 items-center"
                             >
                                 <span className="text-left">
                                     {theme.name.charAt(0).toUpperCase() + theme.name.slice(1)}

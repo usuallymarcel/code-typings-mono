@@ -2,33 +2,33 @@
 
 THEMES = {
     "forest": {
-        "price": 50000
+        "price": 150000
     },
     "brown": {
-        "price": 50000
+        "price": 150000
     },
     "night": {
-        "price": 50000
+        "price": 150000
     },
     "minimal": {
-        "price": 50000
+        "price": 150000
     },
     "ice": {
-        "price": 50000
+        "price": 150000
     },
     "sunset": {
-        "price": 100000
+        "price": 300000
     },
     "ocean": {
-        "price": 100000
+        "price": 300000
     },
     "neon": {
-        "price": 100000
+        "price": 300000
     },
     "ember": {
-        "price": 150000
+        "price": 600000
     },
     "aurora": {
-        "price": 150000
+        "price": 600000
     },
 }

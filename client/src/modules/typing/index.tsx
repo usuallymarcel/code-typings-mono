@@ -314,6 +314,7 @@ const displayTypeText = () => {
                 onChange={handleChange}
                 spellCheck={false}
                 disabled={typingDisabled}
+		onPaste={(e) => {e.preventDefault()}}
                 className="typingInput"
                 autoComplete='off'
                 data-bwignore="1"

@@ -135,6 +135,12 @@ export default function Chat() {
             disabled={!user}
             onChange={(e) => setInput(e.target.value)}
             placeholder={user ? "Type a message..." : "Must be logged in"}
+            onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault()
+                    sendMessage()
+                }
+            }}
             />
             <button
             onClick={sendMessage}

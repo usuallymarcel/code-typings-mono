@@ -233,7 +233,7 @@ const displayTypeText = () => {
         for (let i = 0; i < token.length; i++) {
             const char = token[i]
 
-            let color = "text-white"
+            let color = "text-[var(--typings-base)]"
             let effect = ""
             let cursor = ""
             let letter = ""
@@ -246,14 +246,14 @@ const displayTypeText = () => {
             }
 
             if (globalIndex === input.length) {
-                cursor = "bg-gray-700"
+                cursor = "bg-[var(--typings-cursor)]"
             }
 
             if (globalIndex < input.length) {
                 if (char === input[globalIndex]) {
-                    color = "text-lime-500"
+                    color = "text-[var(--typings-correct)]"
                 } else {
-                    color = "text-red-500"
+                    color = "text-[var(--typings-error)]"
                     letter = input[globalIndex]
                 }
             }

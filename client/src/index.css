@@ -60,72 +60,135 @@
 
 :root {
   --bg: var(--color-neutral-900);
-  --text: var(--color-white)
+  --text: var(--color-white);
+  --button-bg: #171717;
+  --button-text: var(--color-white);
+  --typings-base: var(--color-white);
+  --typings-correct: var(--color-lime-500);
+  --typings-error: var(--color-red-500);
+  --typings-cursor: var(--color-gray-700);
 }
 
 [data-theme="forest"] {
-  --bg:
-    radial-gradient(circle at 30% 30%, rgba(34,197,94,0.25), transparent 40%),
-    linear-gradient(to bottom, #052e16, #022c22);
-  --text: #d1fae5;
-}
-
-[data-theme="sunset"] {
-  --bg: linear-gradient(135deg, #ff7e5f, #feb47b, #ff6a00);
-  --text: #fff7ed;
-}
-
-[data-theme="ocean"] {
-  --bg: linear-gradient(to bottom, #020617, #0ea5e9, #0369a1);
-  --text: #e0f2fe;
-}
-
-[data-theme="night"] {
-  --bg:
-    radial-gradient(circle at 20% 20%, rgba(255,255,255,0.15) 1px, transparent 1px),
-    radial-gradient(circle at 80% 40%, rgba(255,255,255,0.1) 1px, transparent 1px),
-    linear-gradient(to bottom, #020617, #0f172a);
-  --text: #e2e8f0;
-}
-
-[data-theme="ember"] {
-  --bg: linear-gradient(135deg, #1c1917, #7c2d12, #dc2626);
-  --text: #fee2e2;
+  --bg: #042c21;
+  --text: #e0a38b;
+  --button-bg: rgb(42, 26, 9);
+  --button-text: #dda792;
+  --typings-base: rgb(255, 255, 255);
+  --typings-correct: rgb(0, 255, 123);
+  --typings-error: rgb(255, 106, 0);
+  --typings-cursor: rgb(46, 112, 102);
 }
 
 [data-theme="brown"] {
-  --bg:
-    radial-gradient(circle at 50% 20%, rgba(255,255,255,0.08), transparent 50%),
-    linear-gradient(135deg, #2f1f14, #5a3e2b, #1c120c);
-  --text: #fef3c7;
+  --bg: #301a00;
+  --text: #fffae4;
+  --button-bg: rgb(208, 174, 113);
+  --button-text: #15110c;
+  --typings-base: rgb(255, 255, 255);
+  --typings-correct: rgb(255, 242, 0);
+  --typings-error: rgb(255, 94, 0);
+  --typings-cursor: rgb(103, 87, 63);
+}
+
+[data-theme="night"] {
+  --bg: #1c1824;
+  --text: #e2e8f0;
+  --button-bg: rgb(55, 55, 55);
+  --button-text: #ffffff;
+  --typings-base: rgb(255, 255, 255);
+  --typings-correct: rgb(216, 209, 0);
+  --typings-error: rgb(255, 0, 251);
+  --typings-cursor: rgb(112, 112, 46);
+}
+
+[data-theme="minimal"] {
+  --bg: #1f2937;
+  --text: #e5e7eb;
+  --button-bg: #b9acac;
+  --button-text: #000000;
+  --typings-base: rgb(255, 255, 255);
+  --typings-correct: rgb(255, 186, 217);
+  --typings-error: rgb(0, 255, 242);
+  --typings-cursor: rgb(61, 82, 80);
+}
+
+[data-theme="ice"] {
+  --bg: #7dd3fc;
+  --text: #082f49;
+  --button-bg: #6e8a8a;
+  --button-text: #000000;
+  --typings-base: rgb(49, 49, 49);
+  --typings-correct: rgb(25, 0, 255);
+  --typings-error: rgb(189, 51, 157);
+  --typings-cursor: rgb(255, 255, 255);
+}
+
+[data-theme="sunset"] {
+  --bg: linear-gradient(135deg, #fff25f, #feba7b, #ff6200);
+  --text: #000000;
+  --button-bg: #b35100;
+  --button-text: #472000;
+  --typings-base: rgb(0, 0, 0);
+  --typings-correct: rgb(0, 158, 147);
+  --typings-error: rgb(184, 88, 161);
+  --typings-cursor: rgb(255, 255, 255);
+}
+
+[data-theme="ocean"] {
+  --bg: linear-gradient(to bottom, #113e7d, #04b2cd, rgb(87, 160, 198));
+  --text: #ffffff;
+  --button-bg: #ffffff;
+  --button-text: #1b0047;
+  --typings-base: rgb(0, 0, 0);
+  --typings-correct: rgb(26, 255, 0);
+  --typings-error: rgb(255, 0, 0);
+  --typings-cursor: rgb(255, 255, 255);
 }
 
 [data-theme="neon"] {
   --bg:
-    radial-gradient(circle at 30% 50%, rgba(168,85,247,0.4), transparent 40%),
-    radial-gradient(circle at 70% 50%, rgba(236,72,153,0.4), transparent 40%),
+    radial-gradient(circle at 10% 50%, rgba(168,85,247,0.4), transparent 80%),
+    radial-gradient(circle at 90% 50%, rgba(236,72,153,0.4), transparent 80%),
     #020617;
   --text: #f5f3ff;
+  --button-bg: rgb(215, 255, 251);
+  --button-text: #000000;
+  --typings-base: rgb(255, 255, 255);
+  --typings-correct: rgb(216, 209, 0);
+  --typings-error: rgb(255, 0, 251);
+  --typings-cursor: rgb(112, 112, 46);
 }
 
-[data-theme="minimal"] {
-  --bg: linear-gradient(to bottom, #111827, #1f2937);
-  --text: #e5e7eb;
+[data-theme="ember"] {
+  --bg: linear-gradient(135deg, #1c1917, #7c2d12, #dc2626);
+  --text: #fffae4;
+  --button-bg: rgb(208, 113, 113);
+  --button-text: #15110c;
+  --typings-base: rgb(255, 255, 255);
+  --typings-correct: rgb(255, 242, 0);
+  --typings-error: rgb(255, 94, 0);
+  --typings-cursor: rgb(125, 97, 51);
 }
+
+
+
 
 [data-theme="aurora"] {
   --bg:
-    radial-gradient(circle at 20% 80%, rgba(34,197,94,0.3), transparent 50%),
-    radial-gradient(circle at 80% 20%, rgba(59,130,246,0.3), transparent 50%),
-    radial-gradient(circle at 50% 50%, rgba(168,85,247,0.3), transparent 50%),
+    radial-gradient(circle at 20% 80%, rgba(34,197,94,0.3), transparent 80%),
+    radial-gradient(circle at 80% 20%, rgba(59,130,246,0.3), transparent 80%),
+    radial-gradient(circle at 50% 50%, rgba(168,85,247,0.3), transparent 80%),
     #020617;
-  --text: #e0f2fe;
+  --text: #e5e7eb;
+  --button-bg: #b9acac;
+  --button-text: #000000;
+  --typings-base: rgb(255, 255, 255);
+  --typings-correct: rgb(255, 186, 217);
+  --typings-error: rgb(0, 255, 242);
+  --typings-cursor: rgb(61, 82, 80);
 }
 
-[data-theme="ice"] {
-  --bg: linear-gradient(135deg, #e0f2fe, #bae6fd, #7dd3fc);
-  --text: #082f49;
-}
 
 body {
   background: var(--bg);

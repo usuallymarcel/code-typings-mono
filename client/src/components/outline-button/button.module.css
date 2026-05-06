@@ -4,7 +4,8 @@
     border: solid 1px;
     padding: 0;
     cursor: pointer;
-    background: #171717;
+    color: var(--button-text);
+    background: var(--button-bg);
 }
 
 .front {
@@ -12,10 +13,10 @@
     display: block;
     padding: 0px 20px;
     border: solid 1px;
-    background: #171717;
+    background: var(--button-bg);
     border-radius: 12px;
     font-size: 1.25rem;
-    color: white;
+    color: var(--button-text);
     transform: translateY(-10px) translateX(2px);
     will-change: transform;
     transition: transform 20ms;

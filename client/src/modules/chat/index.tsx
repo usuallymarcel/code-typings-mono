@@ -6,7 +6,7 @@ import { useLeaderboard } from '../leaderboard/hooks/useLeaderboard'
 const server =
   window.location.href.includes('localhost')
     ? serverUrl
-    : window.location.origin
+    : window.location.origin + serverUrl
 
 const wsUrl = server.replace(/^http/, 'ws')
 

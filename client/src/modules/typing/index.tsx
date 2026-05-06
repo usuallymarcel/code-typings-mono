@@ -20,6 +20,7 @@ import Gamble from '../points'
 import { usePointsContext } from '../points/contexts/PointsContext'
 import { useTheme } from '../../utils/Theme/ThemeContext'
 import { ThemeShop } from '../store'
+import Chat from '../chat'
 
 const sizeClasses = [
     "text-xl",
@@ -353,8 +354,9 @@ const displayTypeText = () => {
                 </OutlineButton>
                 <OutlineButton onClick={() => openModal(<Leaderboard />)}>Leaderboard</OutlineButton>
 
-                {user && <OutlineButton onClick={() => openModal(<Gamble />)}>Gamble :)</OutlineButton>}
+                {user && <OutlineButton onClick={() => openModal(<Gamble />)}>Gamble</OutlineButton>}
                 {user && <OutlineButton onClick={() => openModal(<ThemeShop />)}>Themes</OutlineButton>}
+                {<OutlineButton onClick={() => openModal(<Chat />)}>Chat</OutlineButton>}
                 </div>
             </div>
 

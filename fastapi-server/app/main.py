@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import env
-from app.routes import blackjack, points, themes, users
+from app.routes import blackjack, messages, points, themes, users, ws
 from app.routes import leaderboard
 
 app = FastAPI()
@@ -11,6 +11,8 @@ app.include_router(leaderboard.router)
 app.include_router(points.router)
 app.include_router(blackjack.router)
 app.include_router(themes.router)
+app.include_router(ws.router)
+app.include_router(messages.router)
 
 origins = [
     'http://localhost:5173',

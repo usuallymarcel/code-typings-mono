@@ -81,10 +81,10 @@
 }
 
 [data-theme="brown"] {
-  --bg: #301a00;
-  --text: #fffae4;
-  --button-bg: rgb(208, 174, 113);
-  --button-text: #15110c;
+  --bg: #5c3e2b;
+  --text: #ecbeaa;
+  --button-bg: rgb(79, 50, 40);
+  --button-text: #000000;
   --typings-base: rgb(255, 255, 255);
   --typings-correct: rgb(255, 242, 0);
   --typings-error: rgb(255, 94, 0);

@@ -211,7 +211,7 @@ export default function Blackjack() {
     /* ---------------- UI ---------------- */
 
     return (
-        <div className="flex items-center justify-center p-10 text-white bg-neutral-900 rounded-xl border">
+        <div className="flex items-center justify-center p-10 bg-[var(--bg)] rounded-xl border">
         <div className="flex flex-col gap-4 w-85">
 
             {/* POINTS */}

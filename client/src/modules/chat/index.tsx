@@ -117,7 +117,7 @@ export default function Chat() {
     }
 
     return (
-        <div className="flex flex-col h-100 p-4 text-white bg-neutral-900 rounded-xl border">
+        <div className="flex flex-col h-100 p-4 bg-[var(--bg)] rounded-xl border">
         <h3 className="mb-2 underline">Global Chat:</h3>
 
         <div className="flex-1 overflow-y-scroll space-y-2 mb-3">

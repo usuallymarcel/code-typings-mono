@@ -8,7 +8,7 @@ export function Leaderboard({length}: {length?: number}) {
     const { leaderboard, error } = useLeaderboard({selected})
 
     return (
-        <div className='flex items-center justify-center p-20 text-white bg-neutral-900 rounded-xl border'>
+        <div className='flex items-center justify-center p-20 bg-[var(--bg)] rounded-xl border'>
             <div className="w-full max-w-md">
                 <h2 className="text-xl font-semibold mb-4 text-center">
                     Leaderboard

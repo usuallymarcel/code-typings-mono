@@ -62,6 +62,7 @@
   --bg: var(--color-neutral-900);
   --text: var(--color-white);
   --button-bg: #171717;
+  --button-bg-bg: #171717;
   --button-text: var(--color-white);
   --typings-base: var(--color-white);
   --typings-correct: var(--color-lime-500);
@@ -72,8 +73,9 @@
 [data-theme="forest"] {
   --bg: #042c21;
   --text: #e0a38b;
-  --button-bg: rgb(42, 26, 9);
-  --button-text: #dda792;
+  --button-bg: rgb(115, 68, 41);
+  --button-bg-bg: #2f1711;
+  --button-text: #000000;
   --typings-base: rgb(255, 255, 255);
   --typings-correct: rgb(0, 255, 123);
   --typings-error: rgb(255, 106, 0);
@@ -81,9 +83,10 @@
 }
 
 [data-theme="brown"] {
-  --bg: #5c3e2b;
+  --bg: #5f402c;
   --text: #ecbeaa;
-  --button-bg: rgb(79, 50, 40);
+  --button-bg: rgb(163, 137, 129);
+  --button-bg-bg: #463323;
   --button-text: #000000;
   --typings-base: rgb(255, 255, 255);
   --typings-correct: rgb(255, 242, 0);
@@ -92,10 +95,11 @@
 }
 
 [data-theme="night"] {
-  --bg: #1c1824;
-  --text: #e2e8f0;
-  --button-bg: rgb(55, 55, 55);
-  --button-text: #ffffff;
+  --bg: #201824;
+  --text: #d0fdf8;
+  --button-bg: rgb(66, 103, 112);
+  --button-bg-bg: #0c0f28;
+  --button-text: #d0fdf8;
   --typings-base: rgb(255, 255, 255);
   --typings-correct: rgb(216, 209, 0);
   --typings-error: rgb(255, 0, 251);
@@ -105,7 +109,8 @@
 [data-theme="minimal"] {
   --bg: #1f2937;
   --text: #e5e7eb;
-  --button-bg: #b9acac;
+  --button-bg: #b7acb9;
+  --button-bg-bg: #a389a3;
   --button-text: #000000;
   --typings-base: rgb(255, 255, 255);
   --typings-correct: rgb(255, 136, 190);
@@ -114,13 +119,14 @@
 }
 
 [data-theme="ice"] {
-  --bg: #7dd3fc;
+  --bg: #5b99b6;
   --text: #082f49;
   --button-bg: #6e8a8a;
+  --button-bg-bg: #09390d;
   --button-text: #000000;
   --typings-base: rgb(49, 49, 49);
-  --typings-correct: rgb(25, 0, 255);
-  --typings-error: rgb(189, 51, 157);
+  --typings-correct: rgb(14, 0, 140);
+  --typings-error: rgb(189, 51, 51);
   --typings-cursor: rgb(255, 255, 255);
 }
 
@@ -128,6 +134,7 @@
   --bg: linear-gradient(135deg, #fff25f, #feba7b, #ff6200);
   --text: #000000;
   --button-bg: #b35100;
+  --button-bg-bg: #171717;
   --button-text: #472000;
   --typings-base: rgb(0, 0, 0);
   --typings-correct: rgb(0, 158, 147);
@@ -139,6 +146,7 @@
   --bg: linear-gradient(to bottom, #113e7d, #04b2cd, rgb(87, 160, 198));
   --text: #ffffff;
   --button-bg: #ffffff;
+  --button-bg-bg: #171717;
   --button-text: #1b0047;
   --typings-base: rgb(0, 0, 0);
   --typings-correct: rgb(26, 255, 0);
@@ -153,6 +161,7 @@
     #020617;
   --text: #f5f3ff;
   --button-bg: rgb(215, 255, 251);
+  --button-bg-bg: #174037;
   --button-text: #000000;
   --typings-base: rgb(255, 255, 255);
   --typings-correct: rgb(216, 209, 0);
@@ -164,6 +173,7 @@
   --bg: linear-gradient(135deg, #1c1917, #7c2d12, #dc2626);
   --text: #fffae4;
   --button-bg: rgb(208, 113, 113);
+  --button-bg-bg: #730000;
   --button-text: #15110c;
   --typings-base: rgb(255, 255, 255);
   --typings-correct: rgb(255, 242, 0);
@@ -182,9 +192,10 @@
     #020617;
   --text: #e5e7eb;
   --button-bg: #b9acac;
+  --button-bg-bg: #34004e;
   --button-text: #000000;
   --typings-base: rgb(255, 255, 255);
-  --typings-correct: rgb(255, 186, 217);
+  --typings-correct: rgb(230, 0, 255);
   --typings-error: rgb(0, 255, 242);
   --typings-cursor: rgb(61, 82, 80);
 }

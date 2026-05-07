@@ -72,7 +72,7 @@ export function ThemeShop() {
     }
 
     return (
-        <div className="flex items-center justify-center p-20 bg-[var(--bg)] rounded-xl border">
+        <div className="flex items-center justify-center p-20 [background:var(--bg)] rounded-xl border">
             <div className="w-full max-w-md">
                 <h2 className="text-xl font-semibold mb-4 text-center">
                     Theme Shop

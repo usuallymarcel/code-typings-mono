@@ -211,7 +211,7 @@ export default function Blackjack() {
     /* ---------------- UI ---------------- */
 
     return (
-        <div className="flex items-center justify-center p-10 bg-[var(--bg)] rounded-xl border">
+        <div className="flex items-center justify-center p-10 [background:var(--bg)] rounded-xl border">
         <div className="flex flex-col gap-4 w-85">
 
             {/* POINTS */}
@@ -227,7 +227,7 @@ export default function Blackjack() {
                 min={1}
                 value={bet}
                 onChange={(e) => setBet(Number(e.target.value))}
-                className="p-2 rounded bg-neutral-800 text-white"
+                className="p-2 rounded bg-[var(--button-bg-bg)]"
                 />
                 <OutlineButton onClick={startGame} disabled={loading}>
                 Start Game

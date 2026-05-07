@@ -22,7 +22,7 @@ export function SoundSettingsModal() {
 
 
     return (
-        <div className='flex items-center border justify-center p-20 bg-[var(--bg)] rounded-xl'>
+        <div className='flex items-center border justify-center p-20 [background:var(--bg)] rounded-xl'>
             {/* <div className="flex items-center justify-between" onClick={closeModal}> */}
 
 {/* 

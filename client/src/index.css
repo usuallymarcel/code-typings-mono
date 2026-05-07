@@ -108,8 +108,8 @@
   --button-bg: #b9acac;
   --button-text: #000000;
   --typings-base: rgb(255, 255, 255);
-  --typings-correct: rgb(255, 186, 217);
-  --typings-error: rgb(0, 255, 242);
+  --typings-correct: rgb(255, 136, 190);
+  --typings-error: rgb(197, 41, 41);
   --typings-cursor: rgb(61, 82, 80);
 }
 

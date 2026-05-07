@@ -70,6 +70,26 @@
   --typings-cursor: var(--color-gray-700);
 }
 
+[data-theme="green"] {
+  --bg: #042c21;
+  --button-text: #000000;
+  --button-bg: rgb(59, 59, 59);
+}
+
+[data-theme="purple"] {
+  --bg: #10042c;
+  --button-text: #000000;
+  --button-bg: #642075;
+  --button-bg-bg: #493452;
+}
+
+[data-theme="orange"] {
+  --bg: #7a460e;
+  --button-text: #000000;
+  --button-bg: #bb8600;
+  --button-bg-bg: #654700;
+}
+
 [data-theme="forest"] {
   --bg: #042c21;
   --text: #e0a38b;

@@ -1,6 +1,15 @@
 #temp until set up db
 
 THEMES = {
+    "green": {
+        "price": 50000
+    },
+    "purple": {
+        "price": 50000
+    },
+    "orange": {
+        "price": 50000
+    },
     "forest": {
         "price": 100000
     },

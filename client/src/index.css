@@ -212,11 +212,11 @@
     #020617;
   --text: #e5e7eb;
   --button-bg: #b9acac;
-  --button-bg-bg: #34004e;
+  --button-bg-bg: #938787;;
   --button-text: #000000;
-  --typings-base: rgb(255, 255, 255);
-  --typings-correct: rgb(230, 0, 255);
-  --typings-error: rgb(0, 255, 242);
+  --typings-base: #e5e7eb;
+  --typings-correct: rgb(0, 187, 97);
+  --typings-error: rgb(0, 149, 255);
   --typings-cursor: rgb(61, 82, 80);
 }
 

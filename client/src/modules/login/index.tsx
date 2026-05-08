@@ -92,7 +92,7 @@ export default function Login() {
     }
 
     return (
-        <div className='flex items-center border justify-center p-20 text-white bg-neutral-900 rounded-xl'>
+        <div className='flex items-center border justify-center p-20 [background:var(--bg)] rounded-xl'>
 
         <div className="flex flex-col gap-3">
             <div className="flex gap-2">

@@ -227,7 +227,7 @@ export default function Blackjack() {
                 min={1}
                 value={bet}
                 onChange={(e) => setBet(Number(e.target.value))}
-                className="p-2 rounded bg-[var(--button-bg-bg)]"
+                className="p-2 rounded bg-(--button-bg-bg)"
                 />
                 <OutlineButton onClick={startGame} disabled={loading}>
                 Start Game

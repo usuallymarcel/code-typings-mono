@@ -18,11 +18,29 @@ def get_themes(request: Request, db = Depends(get_db)):
 
     themes = get_themes_by_user_id(db, session.user_id)
 
-    return {'ok': True, 'themes': themes}
+    themes_with_css = []
+
+    for theme in themes:
+        themes_with_css.append({
+            "id": theme.id,
+            "theme": theme.theme,
+            "css": THEMES.get(theme.theme, {}).get("css", "")
+        })
+
+    return {'ok': True, 'themes': themes_with_css}
 
 @router.get('/all')
 def get_all_themes():
-    return {'ok': True, 'themes': THEMES}
+    themes_without_css = {
+        name: {
+            key: value
+            for key, value in theme.items()
+            if key != 'css'
+        }
+        for name, theme in THEMES.items()
+    }
+
+    return {'ok': True, 'themes': themes_without_css}
 
 @router.post('/buy/{theme}')
 def buy_theme(request: Request, theme: str, db = Depends(get_db)):

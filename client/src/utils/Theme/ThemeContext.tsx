@@ -17,7 +17,7 @@ type res = {
 
 type theme = {
     theme: string,
-    user_id: number,
+    css: string,
     id: number
 }
 
@@ -37,6 +37,19 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
             if (data.ok) {
                 const themeNames = data.themes.map((t) => t.theme)
                 setThemes(themeNames)
+
+                const existing = document.getElementById('dynamic-themes')
+
+                if(existing) {
+                    existing.remove()
+                }
+
+                const style = document.createElement('style')
+                style.id = 'dynamic-themes'
+
+                style.innerHTML = data.themes.map((t) => t.css || "").join('\n')
+
+                document.head.appendChild(style)
 
                 const saved = localStorage.getItem("theme") || themeNames[0] || "dark"
 

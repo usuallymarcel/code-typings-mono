@@ -76,6 +76,30 @@
   --button-bg: rgb(59, 59, 59);
 }
 
+[data-theme="????"] {
+  --bg: repeating-linear-gradient(
+  0deg,
+  #1a332b,
+  #1a332b 2px,
+  #142828 2px,
+  #142822 4px
+);
+  --text: #000000;
+  --button-bg: repeating-linear-gradient(
+  0deg,
+  #1a332b,
+  #1a332b 2px,
+  #142828 2px,
+  #142822 4px
+);
+  --button-bg-bg: ;
+  --button-text: #000000;
+  --typings-base: rgb(0, 0, 0);
+  --typings-correct: rgb(77, 140, 79);
+  --typings-error: rgb(153, 105, 209);
+  --typings-cursor: rgb(61, 82, 80);
+}
+
 [data-theme="purple"] {
   --bg: #10042c;
   --button-text: #000000;
@@ -181,7 +205,7 @@
     #020617;
   --text: #f5f3ff;
   --button-bg: rgb(215, 255, 251);
-  --button-bg-bg: #174037;
+  --button-bg-bg: #44524f;
   --button-text: #000000;
   --typings-base: rgb(255, 255, 255);
   --typings-correct: rgb(216, 209, 0);
@@ -190,12 +214,12 @@
 }
 
 [data-theme="ember"] {
-  --bg: linear-gradient(135deg, #1c1917, #7c2d12, #dc2626);
+  --bg: linear-gradient(135deg, #c7906e, #7c2d12, #5f2410);
   --text: #fffae4;
-  --button-bg: rgb(208, 113, 113);
-  --button-bg-bg: #730000;
+  --button-bg: rgb(191, 165, 165);
+  --button-bg-bg: #602828;
   --button-text: #15110c;
-  --typings-base: rgb(255, 255, 255);
+  --typings-base: #fffae4;
   --typings-correct: rgb(255, 242, 0);
   --typings-error: rgb(255, 94, 0);
   --typings-cursor: rgb(125, 97, 51);

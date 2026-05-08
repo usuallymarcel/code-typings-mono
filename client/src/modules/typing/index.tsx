@@ -46,6 +46,7 @@ export default function Typing() {
     const { openModal } = useModal()
     const [textData, setTextData] = useTextData()
     const textSizeClass = sizeClasses[textData.fontSize - 1]
+    const [textReloadTrigger, setTextReloadTrigger] = useState(0)
 		
 
     // const { playSound } = useSound()
@@ -137,6 +138,10 @@ export default function Typing() {
     const handleKeyPress = useCallback((event: KeyboardEvent) => {
     switch(event.key) {
         case 'Escape':
+            if (!inputRef.current?.value) {
+                setTextReloadTrigger(prev => prev + 1)
+                break
+            }
             reset()
             break
         case ' ': //spacebar
@@ -363,7 +368,9 @@ const displayTypeText = () => {
             <div className="flex flex-wrap justify-center items-center py-4 gap-10">
             <RandomizeText 
             onChange={handleTextChange}
-            startLength={textData.textLength}/>
+            startLength={textData.textLength}
+            reloadTrigger={textReloadTrigger}
+            />
             {/* <p>or</p> */}
             {/* <TextSelector 
             onChange={handleTextChange}

@@ -21,11 +21,11 @@ export function RandomizeText( {onChange, reloadTrigger, startLength} : { onChan
             {lengths.map((len) => numberButton(len)
             )}
 
-            <button className="outline px-1 text-gray-500" onClick={() => setRandomize(prev => prev +1)}>Regenerate</button>
+            <button className="outline px-1 " onClick={() => setRandomize(prev => prev +1)}>Regenerate</button>
         </>
     )
 
     function numberButton(len: number) {
-        return <button key={`button-length-${len}`} className={`hover:text-teal-800 text-teal-600 ${length === len ? `underline` : ``}`} onClick={() => {setLength(len); setRandomize(prev => prev + 1)}}>{len}</button>
+        return <button key={`button-length-${len}`} className={`${length === len ? `underline` : ``}`} onClick={() => {setLength(len); setRandomize(prev => prev + 1)}}>{len}</button>
     }
 }

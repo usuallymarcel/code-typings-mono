@@ -108,17 +108,30 @@ export default function Typing() {
     }
     }, [typingDisabled])
 
+    
     const reset = () => {
         setInput("")
         setStartTime(null)
         setEndTime(null)
         setTypingDisabled(false)
-
+        
         comboRef.current = 1
         maxCombo.current = 1
         setStats({ wpm: 0, accuracy: 0, cps: 0, combo: 0, cpsXcombo: 0})
         setScore(0)
     }
+
+    useEffect(() => {
+        if (startTime !== null) return
+
+        const interval = setInterval(() => {
+            console.log('5 seconds idle reset')
+            setTextReloadTrigger(prev => prev + 1)
+
+        }, 5000)
+
+        return () => clearInterval(interval)
+    }, [startTime])
 
     const handleTextChange = useCallback((text: string, length: number) => {
         reset()
@@ -138,11 +151,8 @@ export default function Typing() {
     const handleKeyPress = useCallback((event: KeyboardEvent) => {
     switch(event.key) {
         case 'Escape':
-            if (!inputRef.current?.value) {
-                setTextReloadTrigger(prev => prev + 1)
-                break
-            }
             reset()
+            setTextReloadTrigger(prev => prev + 1)
             break
         case ' ': //spacebar
             handleSpace()
@@ -342,7 +352,7 @@ const displayTypeText = () => {
             <div className="flex flex-wrap gap-5 justify-center my-5">
                 <div className='flex flex-wrap gap-5 justify-center'>
 
-                <OutlineButton onClick={reset}>Reset</OutlineButton>
+                {/* <OutlineButton onClick={reset}>Reset</OutlineButton> */}
                 <OutlineButton onClick={() => setJuice(prev => !prev)}>
                     juice: <span className="inline-block w-8 text-center">{juice ? "ON" : "OFF"}</span>
                 </OutlineButton>

@@ -1,6 +1,9 @@
 #temp until set up db
 
-THEMES = {
+THEMES = {    
+    "dark": {
+        "price": 0
+    },
     "green": {
         "price": 50000,
         "css": """

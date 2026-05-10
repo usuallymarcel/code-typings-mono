@@ -2,6 +2,7 @@ import { createContext, useContext } from "react"
 
 type ModalContextType = {
     openModal: (component: React.ReactNode ) => void
+    isModalOpen: boolean
     closeModal: () => void
 }
 

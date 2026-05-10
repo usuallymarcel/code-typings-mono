@@ -382,7 +382,7 @@ const displayTypeText = () => {
 
             <div className="flex flex-wrap justify-center items-center py-4 gap-10">
             <RandomizeText 
-            onChange={handleTextChange}
+            onChange={() => handleTextChange}
             startLength={textData.textLength}
             reloadTrigger={textReloadTrigger}
             />

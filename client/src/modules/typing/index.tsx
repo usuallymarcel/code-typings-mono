@@ -18,8 +18,7 @@ import { useUser } from '../../utils/User/UserContext'
 import { useLeaderboardEntry } from '../leaderboard/hooks/useLeaderboardEntry'
 import Gamble from '../points'
 import { usePointsContext } from '../points/contexts/PointsContext'
-import { useTheme } from '../../utils/Theme/ThemeContext'
-import { ThemeShop } from '../store'
+import { ThemeShop } from '../themes'
 import Chat from '../chat'
 
 const sizeClasses = [
@@ -60,8 +59,6 @@ export default function Typing() {
     const { sendLeaderboardEntry } = useLeaderboardEntry()
     const { fetchPoints, points, updatePoints } = usePointsContext()
 
-    const { themes, theme, changeTheme } = useTheme();
-    
     // const typeSpaceSound = useRef(new Audio("/sounds/spacebar.wav"))
 
     const inputRef = useRef<HTMLInputElement | null>(null)
@@ -395,17 +392,6 @@ const displayTypeText = () => {
 
             {/* </div> */}
 
-            {user && <select
-                value={theme}
-                onChange={(e) => changeTheme(e.target.value)}
-                className="p-2 border rounded"
-            >
-                {themes.map((t) => (
-                    <option key={t} value={t} className='bg-black'>
-                        {t.charAt(0).toUpperCase() + t.slice(1)}
-                    </option>
-                ))}
-            </select>}
             
         </div>
     )

@@ -12,11 +12,18 @@ type ApiResponse = {
     themes: Record<string, { price: number }>
 }
 
+const selectedStyling = "bg-blue-400"
+const ownedStyling = "bg-pink-600 hover:bg-pink-800"
+const brokeStyling = "bg-gray-400 cursor-default"
+const buyStyling = "bg-green-400 hover:bg-green-600"
+
 export function ThemeShop() {
     const [themes, setThemes] = useState<Theme[] | null>(null)
     const [error, setError] = useState<string | null>(null)
 
-    const { fetchThemes, themes: userThemes } = useTheme()
+    const { fetchThemes, themes: userThemes, theme: selectedTheme, changeTheme } = useTheme()
+
+    
 
     const { points } = usePoints()
 
@@ -71,12 +78,62 @@ export function ThemeShop() {
         } 
     }
 
+    const themeElements = () => {
+        if (!themes) return
+
+        const themesList: React.ReactNode[] = []
+
+        for (const theme of themes) {
+            const owned = userThemes.includes(theme.name)
+            const selected = theme.name === selectedTheme
+            
+            const isBroke = points != null && points < theme.price
+            const buttonColorStyle = selected ? selectedStyling : owned ? ownedStyling : isBroke ? brokeStyling : buyStyling 
+            const buttonText = selected ? 'Selected' : owned ? 'Owned' : 'Buy' 
+
+            const disabled = !owned && isBroke
+
+            const isDefault = theme.price === 0
+
+            const price = isDefault ? 'default' : theme.price
+
+            const onClick = selected ? () => {} : owned ? () => changeTheme(theme.name) : () => buyTheme(theme.name)
+
+            themesList.push(
+                <div
+                key={theme.name}
+                className="grid grid-cols-3 gap-2 w-full px-2 items-center"
+                >
+                    <span className="text-left">
+                        {theme.name.charAt(0).toUpperCase() + theme.name.slice(1)}
+                    </span>
+
+                    <span className="text-center">
+                        {price}
+                    </span>
+
+                    <button
+                        onClick={onClick}
+                        className={`w-full text-black rounded-xl px-1 transition-colors duration-100 ${buttonColorStyle}`}
+                        disabled={disabled}
+                    >
+                        {buttonText}
+                    </button>
+                </div>
+            )   
+        }
+        
+
+        return themesList
+    }
+
     return (
-        <div className="flex items-center justify-center p-20 [background:var(--bg)] rounded-xl border">
+        <div className="flex items-center justify-center p-15 [background:var(--bg)] rounded-xl border">
             <div className="w-full max-w-md">
                 <h2 className="text-xl font-semibold mb-4 text-center">
                     Theme Shop
                 </h2>
+                <h3 className="text-center mb-2 underline font-bold">Points: {points}</h3>
 
                 {error && (
                     <p className="text-red-400 text-center">{error}</p>
@@ -88,32 +145,7 @@ export function ThemeShop() {
 
                 {themes && (
                     <div className="flex flex-col items-center">
-                        {themes.map((theme) => (
-                            <div
-                            key={theme.name}
-                            className="grid grid-cols-3 gap-2 w-full px-2 items-center"
-                            >
-                                <span className="text-left">
-                                    {theme.name.charAt(0).toUpperCase() + theme.name.slice(1)}
-                                </span>
-
-                                <span className="text-center">
-                                    {theme.price.toLocaleString()}
-                                </span>
-
-                                <button
-                                    onClick={() => buyTheme(theme.name)}
-                                    className={`w-full text-black rounded-xl transition-colors duration-100 ${
-                                        userThemes.includes(theme.name)
-                                            ? "bg-pink-600 cursor-default"
-                                            : "bg-green-400 hover:bg-green-600 cursor-pointer"
-                                    } disabled:opacity-40`}
-                                    disabled={points != null && points < theme.price}
-                                >
-                                    {userThemes.includes(theme.name) ? "Owned" : "Buy"}
-                                </button>
-                            </div>
-                        ))}
+                        {themeElements()}
                     </div>
                 )}
             </div>

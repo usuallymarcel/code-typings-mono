@@ -1,6 +1,5 @@
 import { createContext, useContext, useEffect, useState } from "react"
 
-
 export type User = {
     id: number
     name: string

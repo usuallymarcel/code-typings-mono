@@ -42,7 +42,7 @@ export default function Typing() {
     const comboRef = useRef(1)
     const defaultText = 'Select a text file or upload a new one'
     const [typeText, setTypeText] = useState<string>(defaultText)
-    const { openModal } = useModal()
+    const { openModal, isModalOpen } = useModal()
     const [textData, setTextData] = useTextData()
     const textSizeClass = sizeClasses[textData.fontSize - 1]
     const [textReloadTrigger, setTextReloadTrigger] = useState(0)
@@ -100,10 +100,14 @@ export default function Typing() {
     }, [typingDisabled])
 
     useEffect(() => {
-    if (!typingDisabled) {
-        inputRef.current?.focus()
-    }
-    }, [typingDisabled])
+        if(isModalOpen === false) {
+            setTextReloadTrigger(prev => prev + 1)
+        }
+
+        if (!typingDisabled && !isModalOpen) {
+            inputRef.current?.focus()
+        }
+    }, [typingDisabled, isModalOpen])
 
     
     const reset = () => {
@@ -119,7 +123,7 @@ export default function Typing() {
     }
 
     useEffect(() => {
-        if (startTime !== null) return
+        if (startTime !== null || isModalOpen) return
 
         const interval = setInterval(() => {
             console.log('5 seconds idle reset')
@@ -128,14 +132,18 @@ export default function Typing() {
         }, 5000)
 
         return () => clearInterval(interval)
-    }, [startTime])
+    }, [startTime, isModalOpen])
 
     const handleTextChange = useCallback((text: string, length: number) => {
         reset()
         setTypeText(text)
-        inputRef.current?.focus()
+
+        if(!isModalOpen) {
+            inputRef.current?.focus()
+        }
+        
         setTextData(prev => ({...prev, textLength: length}))
-    }, [setTextData])
+    }, [setTextData, isModalOpen])
 
     useEffect(() => {
         inputRef.current?.focus()

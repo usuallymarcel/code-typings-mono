@@ -100,15 +100,16 @@ export default function Typing() {
     }, [typingDisabled])
 
     useEffect(() => {
-        if(isModalOpen === false) {
-            setTextReloadTrigger(prev => prev + 1)
-        }
-
         if (!typingDisabled && !isModalOpen) {
             inputRef.current?.focus()
         }
     }, [typingDisabled, isModalOpen])
 
+    useEffect(() => {
+        if(isModalOpen === false) {
+            setTextReloadTrigger(prev => prev + 1)
+        }
+    }, [isModalOpen])
     
     const reset = () => {
         setInput("")
@@ -382,7 +383,7 @@ const displayTypeText = () => {
 
             <div className="flex flex-wrap justify-center items-center py-4 gap-10">
             <RandomizeText 
-            onChange={() => handleTextChange}
+            onChange={handleTextChange}
             startLength={textData.textLength}
             reloadTrigger={textReloadTrigger}
             />

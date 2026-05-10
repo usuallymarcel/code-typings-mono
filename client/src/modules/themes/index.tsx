@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react"
 import { useTheme } from "../../utils/Theme/ThemeContext"
 import { usePoints } from "../points/hooks/usePoints"
+import { ConfirmPurchaseModal } from './components/confirm'
 
 type Theme = {
     name: string
@@ -22,8 +23,8 @@ export function ThemeShop() {
     const [error, setError] = useState<string | null>(null)
 
     const { fetchThemes, themes: userThemes, theme: selectedTheme, changeTheme } = useTheme()
-
-    
+    const [confirmOpen, setConfirmOpen] = useState(false)
+    const [themeToBuy, setThemeToBuy] = useState<string | null>(null)
 
     const { points } = usePoints()
 
@@ -53,9 +54,15 @@ export function ThemeShop() {
         }
 
         fetchAllThemes()
-    }, [])
+    }, [serverUrl])
 
-    const buyTheme = async (themeName: string) => {
+    const openConfirmModal = (themeName: string) => {
+        setThemeToBuy(themeName)
+        setConfirmOpen(true)
+    } 
+
+    const buyTheme = async (themeName: string | null) => {
+        if (themeName === null) return
 
         try {
             const res = await fetch(
@@ -72,7 +79,12 @@ export function ThemeShop() {
                 throw new Error(data.detail || "Failed to buy theme")
             }
 
-            fetchThemes()
+            await fetchThemes()
+
+            changeTheme(themeName)
+
+            setConfirmOpen(false)
+            setThemeToBuy(null)
         } catch (err) {
             console.error(err)
         } 
@@ -97,7 +109,7 @@ export function ThemeShop() {
 
             const price = isDefault ? 'default' : theme.price
 
-            const onClick = selected ? () => {} : owned ? () => changeTheme(theme.name) : () => buyTheme(theme.name)
+            const onClick = selected ? () => {} : owned ? () => changeTheme(theme.name) : () => openConfirmModal(theme.name)
 
             themesList.push(
                 <div
@@ -149,6 +161,7 @@ export function ThemeShop() {
                     </div>
                 )}
             </div>
+            <ConfirmPurchaseModal isOpen={confirmOpen} onClose={() => {setConfirmOpen(false); setThemeToBuy(null)}} onConfirm={() => buyTheme(themeToBuy)} message={themeToBuy ? `Buy ${themeToBuy}?` : ''} />
         </div>
     )
 }

@@ -5,7 +5,7 @@ type ThemeContextType = {
     themes: string[]
     theme: string,
     changeTheme: (newTheme: string) => void,
-    fetchThemes: () => void
+    fetchThemes: () => Promise<void>
 }
 
 const ThemeContext = createContext<ThemeContextType | null>(null)

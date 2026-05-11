@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
 import { useTheme } from "../../utils/Theme/ThemeContext"
-import { usePoints } from "../points/hooks/usePoints"
+import { usePointsContext } from "../points/contexts/PointsContext"
 import { ConfirmPurchaseModal } from './components/confirm'
 
 type Theme = {
@@ -26,7 +26,7 @@ export function ThemeShop() {
     const [confirmOpen, setConfirmOpen] = useState(false)
     const [themeToBuy, setThemeToBuy] = useState<string | null>(null)
 
-    const { points } = usePoints()
+    const { fetchPoints, points } = usePointsContext()
 
     const serverUrl = import.meta.env.VITE_FASTAPI_API_URL as string
 
@@ -81,7 +81,9 @@ export function ThemeShop() {
 
             await fetchThemes()
 
-            changeTheme(themeName)
+	    await fetchPoints()
+            
+	    changeTheme(themeName)
 
             setConfirmOpen(false)
             setThemeToBuy(null)

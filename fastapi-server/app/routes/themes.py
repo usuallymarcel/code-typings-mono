@@ -8,7 +8,16 @@ from app.crud.user_themes import create_theme_by_user_id, get_themes_by_user_id,
 from app.database import get_db
 from app.utils.session_tokens import get_session_from_request
 from app.utils.themes import THEMES
+import logging
+import sys
 
+logging.basicConfig(
+        level=logging.INFO,
+        format="%(levelname)s: %(message)s",
+        handlers=[logging.StreamHandler(sys.stdout)]
+)
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix='/themes', tags=['themes'])
 
@@ -45,7 +54,8 @@ def get_all_themes():
 @router.post('/buy/{theme}')
 def buy_theme(request: Request, theme: str, db = Depends(get_db)):
     session = get_session_from_request(db, request)
-
+    
+    logger.info(f"theme name: {theme}")
     if theme not in THEMES:
         raise HTTPException(status_code=404, detail="Themes does not exist")
     

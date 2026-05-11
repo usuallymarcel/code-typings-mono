@@ -215,9 +215,9 @@ THEMES = {
 }
 """
     },
-    "????" : {
+    "----" : {
         "price": 111111,
-        "css": """[data-theme="????"] {
+        "css": """[data-theme="----"] {
                 --bg: repeating-linear-gradient(
                 0deg,
                 #1a332b,

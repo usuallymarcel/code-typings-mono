@@ -15,8 +15,8 @@ type ApiResponse = {
 
 const selectedStyling = "bg-blue-400"
 const ownedStyling = "bg-pink-600 hover:bg-pink-800"
-const brokeStyling = "bg-gray-400 cursor-default"
-const buyStyling = "bg-green-400 hover:bg-green-600"
+const brokeStyling = "bg-teal-900 cursor-default"
+const buyStyling = "bg-green-600 hover:bg-green-800"
 
 export function ThemeShop() {
     const [themes, setThemes] = useState<Theme[] | null>(null)

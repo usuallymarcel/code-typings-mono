@@ -33,6 +33,9 @@ def update_points(request: Request, data: UpdatePointsRequest, db = Depends(get_
     session = get_session_from_request(db, request)
     check_session_token(db, data.token)
 
+    if data.score > 165:
+        return {'ok': True, 'message': 'no entry created'}
+
     points = get_points_by_user_id(db, session.user_id)
 
     multiplier = 10

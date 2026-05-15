@@ -21,6 +21,9 @@ def create_entry(request: Request, data: CreateEntryRequest, db: Session = Depen
     session = get_session_from_request(db, request)
     check_session_token(db, data.token)
 
+    if data.score > 165:
+        return {'ok': True, 'message': 'no entry created'}
+
     entry = get_entry_by_user_id(db, session.user_id, data.category)
     
     if not entry:

@@ -185,7 +185,7 @@ export default function Typing() {
             setStartTime(Date.now())
         }
 
-        if(value.length === typeText.length) {
+        if(value === typeText) {
             const score = Math.round(stats.wpm * (stats.accuracy/100))
             const category = textData.textLength.toString()
             

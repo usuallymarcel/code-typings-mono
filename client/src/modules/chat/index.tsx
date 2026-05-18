@@ -122,21 +122,22 @@ export default function Chat() {
 
         <div className="flex-1 overflow-y-scroll space-y-2 mb-3">
             {messages.map((m, i) => (
-            <div key={i}>
+            <div key={i} className="whitespace-pre-wrap break-words font-mono">
                 <strong className={getNameColor(m.sender_name)}>{m.sender_name}:</strong> {m.content}
             </div>
             ))}
         </div>
 
         <div className="flex gap-2">
-            <input
-            className="flex-1 p-2 rounded disabled:opacity-40"
+            <textarea
+	    rows={3}
+            className="flex-1 p-2 rounded disabled:opacity-40 border whitespace-pre-wrap resize-none"
             value={input}
             disabled={!user}
             onChange={(e) => setInput(e.target.value)}
             placeholder={user ? "Type a message..." : "Must be logged in"}
             onKeyDown={(e) => {
-                if (e.key === 'Enter') {
+                if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault()
                     sendMessage()
                 }

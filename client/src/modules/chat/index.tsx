@@ -39,6 +39,14 @@ export default function Chat() {
 
     const rankMap = new Map<string, number>()
 
+    const messagesEndRef = useRef<HTMLDivElement | null>(null)
+
+    useEffect(() => {
+        messagesEndRef.current?.scrollIntoView({
+            behavior: 'smooth'
+        })
+    }, [messages])
+
     leaderboard?.forEach((entry, index) => {
         rankMap.set(entry.user.name, index + 1)
     })
@@ -122,10 +130,14 @@ export default function Chat() {
 
         <div className="flex-1 overflow-y-scroll space-y-2 mb-3">
             {messages.map((m, i) => (
-            <div key={i} className="whitespace-pre-wrap break-words font-mono">
-                <strong className={getNameColor(m.sender_name)}>{m.sender_name}:</strong> {m.content}
+            <div key={i} className="whitespace-pre-wrap wrap-break-word font-mono">
+                <strong className={getNameColor(m.sender_name)}>
+                    {m.sender_name}:
+                </strong> 
+                {m.content}
             </div>
             ))}
+            <div ref={messagesEndRef} />
         </div>
 
         <div className="flex gap-2">

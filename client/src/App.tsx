@@ -5,6 +5,7 @@ import { ModalProvider } from './components/modal/ModalProvider'
 import { UserProvider } from './utils/User/UserContext'
 import { PointsProvider } from './modules/points/contexts/PointsContext'
 import { ThemeProvider } from './utils/Theme/ThemeContext'
+import { PetLayer } from './modules/pets/components/PetLayer'
 
 function App() {    
   // const [count, setCount] = useState(0)
@@ -15,8 +16,12 @@ function App() {
             <SoundProvider>
                     <PointsProvider>
                         <ModalProvider>
-                            <div className="flex items-center justify-center font-mono min-h-screen p-10">
-                                    <Typing/>
+                            <div className="relative overflow-hidden min-h-screen">
+                                <PetLayer />
+
+                                <div className="flex items-center justify-center font-mono min-h-screen p-10">
+                                    <Typing />
+                                </div>
                             </div>
                         </ModalProvider>
                     </PointsProvider>

@@ -19,7 +19,7 @@ export const animations: Record<string, AnimationConfig> = {
         frameWidth: 64,
         frameHeight: 64,
         frames: 6,
-        fps: 10,
+        fps: 6,
     },
 
     sleep: {

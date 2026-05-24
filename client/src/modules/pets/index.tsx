@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react'
-import { usePetEngine } from '../hooks/usePetEngine'
-import { PetSprite } from './PetSprite'
-import type { Pet } from '../models/pet'
+import { useEffect } from "react";
+import { PetSprite } from "./components/PetSprite";
+import { usePets } from "./hooks/usePets";
+import type { Pet } from "./models/pet";
 
 const examplePet: Pet = {
     id: 'cat-1',
@@ -10,7 +10,7 @@ const examplePet: Pet = {
     y: window.innerHeight - 120,
     
     vx: 1,
-    vy: 0,
+    vy: 0.2,
     
     width: 64,
     height: 64,
@@ -20,25 +20,20 @@ const examplePet: Pet = {
     behavior: 'walk',
     animation: 'walk',
     
-    speed: 1,
+    speed: 0.4,
 }
 
-export function PetLayer() {
-    const engine = usePetEngine()
-    const [, setTick] = useState(0)
+export function Pets() {
+    const { addPet, pets } = usePets()
 
     useEffect(() => {
-        if (!engine) return
+        addPet(examplePet)
+    }, [])
 
-
-        engine.addPet(examplePet)
-        setTick(t => t + 1)
-
-    }, [engine])
 
     return (
         <div className="fixed inset-0 pointer-events-none overflow-hidden z-50">
-            {engine?.pets.map(pet => (
+            {pets?.map(pet => (
                 <PetSprite
                     key={pet.id}
                     pet={pet}

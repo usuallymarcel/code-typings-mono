@@ -17,8 +17,9 @@ export function updateBehavior(pet: Pet) {
 function updateIdle(pet: Pet) {
     pet.vx *= 0.9
 
-    if(Math.random() < 0.005) {
+    if(Math.random() < 0.01) {
         pet.behavior = 'walk'
+        pet.animation = 'walk'
     }
 }
 
@@ -27,8 +28,13 @@ function updateWalk(pet: Pet) {
         pet.vx = Math.random() > 0.5 ? pet.speed : -pet.speed
     }
 
-    if(Math.random() < 0.002) {
+    if(pet.vy === 0) {
+        pet.vy = Math.random() > 0.5 ? pet.speed : -pet.speed
+    }
+
+    if(Math.random() < 0.1) {
         pet.behavior = 'idle'
+        pet.animation = 'idle'
         pet.vx = 0
     }
 }

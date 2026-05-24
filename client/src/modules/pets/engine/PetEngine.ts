@@ -31,6 +31,8 @@ export class PetEngine {
 
         this.running = true
 
+        if (this.pets.length < 1) return
+        
         const loop = (time: number) => {
             if (!this.running) return
 
@@ -38,7 +40,6 @@ export class PetEngine {
             this.lastTime = time
 
             for (const pet of this.pets) {
-                // console.log(pet)
                 updateBehavior(pet)
                 updatePhysics(pet)
                 resolveScreenBounds(pet)
@@ -56,11 +57,8 @@ export class PetEngine {
             }
 
             // render
-            // console.log('here')
             for (const pet of this.pets) {
-                // console.log(this.pets)
                 if (!pet.element) continue
-                // console.log(pet.element)
                 pet.element.style.transform =
                     `translate(${pet.x}px, ${pet.y}px) scaleX(${pet.direction})`
             }

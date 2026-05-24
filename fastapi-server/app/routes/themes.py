@@ -7,7 +7,7 @@ from app.crud.user_points import get_points_by_user_id, update_user_points
 from app.crud.user_themes import create_theme_by_user_id, get_themes_by_user_id, get_user_theme
 from app.database import get_db
 from app.utils.session_tokens import get_session_from_request
-from app.utils.themes import THEMES
+from app.consts.themes import THEMES
 import logging
 import sys
 

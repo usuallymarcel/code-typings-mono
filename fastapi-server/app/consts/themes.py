@@ -114,7 +114,7 @@ THEMES = {
   --bg: #5b99b6;
   --text: #082f49;
   --button-bg: #6e8a8a;
-  --button-bg-bg: #09390d;
+  --button-bg-bg: #6e8a8a;
   --button-text: #000000;
   --typings-base: rgb(49, 49, 49);
   --typings-correct: rgb(14, 0, 140);

@@ -1,14 +1,8 @@
-export type PetBehavior = 'idle' | 'walk' | 'follow' | 'sleep'
+export type BehaviorTypes = 'idle' | 'walk' | 'follow' | 'sleep'
 
-export type PetAnimation = 'idle' | 'walk'
+export type PetBehavior = Array<BehaviorTypes>
 
-type IdleState = 'still' | 'lookAround'
-
-interface IdleProperties {
-    state: IdleState
-    timer: number
-    accumulator: number
-}
+// export type PetAnimation = 'idle' | 'walk'
 
 export interface Pet {
     id: string
@@ -19,13 +13,18 @@ export interface Pet {
     vx: number
     vy: number
 
+    targetVx: number
+    targetVy: number
+
     width: number
     height: number
 
     direction: 1 | -1
 
-    behavior: PetBehavior
-    animation: PetAnimation
+    behaviorTimer?: number
+    currentBehavior: BehaviorTypes
+    behaviors: PetBehavior
+    // animation: PetAnimation
 
     speed: number
 
@@ -36,7 +35,4 @@ export interface Pet {
 
     _animationState?: { frame: number, timer: number }
 
-    idle?: IdleProperties
-
-    sprite?: string
 }

@@ -1,103 +1,83 @@
 import type { Pet } from '../models/pet'
 
+function randomFloat(min: number, max: number) {
+    return Math.random() * (max - min) + min
+}
+
 export function updateBehavior(pet: Pet) {
-    switch(pet.behavior) {
-        case 'idle':
-            updateIdle(pet)
-            break
+    if (pet.behaviorTimer === undefined) {
+        chooseBehavior(pet)
+    }
+
+    pet.behaviorTimer! -= 1
+
+    if (pet.behaviorTimer! <= 0) {
+        chooseBehavior(pet)
+    }
+
+    console.log(pet.currentBehavior)
+    switch (pet.currentBehavior) {
         case 'walk':
-            updateWalk(pet)
+            walk(pet)
+            break
+        case 'idle':
+            idle(pet)
             break
         case 'follow':
-            updateFollow(pet)
+            follow(pet)
+            break
+        case 'sleep':
+            sleep(pet)
             break
     }
 }
 
-function updateLookAround(pet: Pet) {
-    if (Math.random() < 0.02) {
-        pet.direction *= -1
-    }
+function chooseBehavior(pet: Pet) {
+    pet.currentBehavior = pet.behaviors[Math.floor(Math.random() * pet.behaviors.length)]
 
-    pet.vx *= 0.95
-    pet.vy *= 0.95
+    pet.behaviorTimer = 5000 + Math.random() * 1240
 }
 
-function updateIdle(pet: Pet) {
+function idle(pet: Pet) {
+    pet.targetVx = 0
+    pet.targetVy = 0
 
-    if (pet.idle === undefined) {
-        pet.idle = {
-            timer: 120 + Math.random() * 120,
-            state: 'still',
-            accumulator: 0
-        }
+    // tiny random movement
+    if (Math.random() < 0.005) {
+        pet.targetVx = randomFloat(-0.5, 0.5)
+        pet.targetVy = randomFloat(-0.5, 0.5)
     }
+}
 
-    pet.idle.timer -= 1
+function walk(pet: Pet) {
+    if (Math.random() < 0.002) {
+        pet.targetVx = randomFloat(-pet.speed, pet.speed)
+        pet.targetVy = randomFloat(-pet.speed, pet.speed)
+    }
+}
 
-    // tiny "breathing drift"
-    const t = performance.now()
-    pet.vx += Math.sin(t * 0.002) * 0.01
-    pet.vy += Math.cos(t * 0.002) * 0.01
-
-    // soften movement
-    pet.vx *= 0.92
-    pet.vy *= 0.92
-
-    // state change only occasionally (not every frame)
-    if (pet.idle.timer > 0) {
-        if (pet.idle.state === 'lookAround') {
-            updateLookAround(pet)
-        }
+function follow(pet: Pet) {
+    if (pet.targetX === undefined || pet.targetY === undefined) {
+        chooseBehavior(pet)
         return
     }
 
-    const r = Math.random()
-
-    if (r < 0.5) {
-        pet.idle.state = 'still'
-        pet.idle.timer = 120 + Math.random() * 180
-    } 
-    else if (r < 0.8) {
-        pet.idle.state = 'lookAround'
-        pet.idle.timer = 60 + Math.random() * 120
-    } 
-    else {
-        pet.behavior = 'walk'
-        pet.animation = 'walk'
-
-        // reset idle state
-        pet.idle = undefined
-    }
-}
-
-function updateWalk(pet: Pet) {
-    if (pet.vx === 0) {
-        pet.vx = Math.random() > 0.5 ? pet.speed : -pet.speed
-    }
-
-    if (pet.vy === 0) {
-        pet.vy = Math.random() > 0.5 ? pet.speed : -pet.speed
-    }
-
-    if (Math.random() < 0.01) {
-        pet.behavior = 'idle'
-        pet.animation = 'idle'
-
-        // smooth stop
-        pet.vx *= 0.3
-        pet.vy *= 0.3
-
-        pet.idle = undefined
-    }
-}
-
-function updateFollow(pet: Pet) {
-    if (!pet.targetX) return
-
     const dx = pet.targetX - pet.x
+    const dy = pet.targetY - pet.y
 
-    const targetVx = Math.sign(dx) * pet.speed
+    const distance = Math.hypot(dx, dy)
 
-    pet.vx += (targetVx - pet.vx) * 0.1
+    if (distance < 10) {
+        pet.targetVx = 0
+        pet.targetVy = 0
+        return
+    }
+
+    pet.targetVx = (dx / distance) * pet.speed
+    pet.targetVy = (dy / distance) * pet.speed
+}
+
+function sleep(pet: Pet) {
+    pet.vx = 0
+    pet.vy = 0
 }

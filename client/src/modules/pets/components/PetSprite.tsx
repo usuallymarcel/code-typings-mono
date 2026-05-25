@@ -1,5 +1,5 @@
 import type { Pet } from '../models/pet'
-import { catAssets } from '../assets/cat/metadata'
+import { petAssets } from '../assets/cat/metadata'
 import { useEffect, useRef } from 'react'
 import { usePetEngine } from '../hooks/usePetEngine'
 
@@ -7,11 +7,8 @@ export function PetSprite({ pet }: { pet: Pet }) {
     const ref = useRef<HTMLDivElement>(null)
     const engine = usePetEngine()
 
-    const sprite = catAssets[pet.animation]
 
     useEffect(() => {
-        console.log('piss')
-        console.log(pet, engine)
         if (ref.current && engine) {
             engine?.setPetElement(pet, ref.current)
         }
@@ -25,7 +22,7 @@ export function PetSprite({ pet }: { pet: Pet }) {
                 width: pet.width,
                 height: pet.height,
                 imageRendering: 'pixelated',
-                backgroundImage: `url(${sprite})`,
+                backgroundImage: `url(${petAssets[pet.currentBehavior]})`,
                 backgroundRepeat: 'no-repeat',
                 willChange: 'transform',
             }}

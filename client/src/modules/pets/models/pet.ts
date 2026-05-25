@@ -1,38 +1,33 @@
-export type BehaviorTypes = 'idle' | 'walk' | 'follow' | 'sleep'
+export type BehaviorTypes = "idle" | "walk" | "follow" | "sleep";
 
-export type PetBehavior = Array<BehaviorTypes>
-
-// export type PetAnimation = 'idle' | 'walk'
-
+export type PetBehavior = Array<BehaviorTypes>;
 export interface Pet {
-    id: string
+    id: string;
 
-    x: number
-    y: number
+    x: number;
+    y: number;
 
-    vx: number
-    vy: number
+    vx: number;
+    vy: number;
 
-    targetVx: number
-    targetVy: number
+    targetVx: number;
+    targetVy: number;
 
-    width: number
-    height: number
+    width: number;
+    height: number;
 
-    direction: 1 | -1
+    direction: 1 | -1;
 
-    behaviorTimer?: number
-    currentBehavior: BehaviorTypes
-    behaviors: PetBehavior
-    // animation: PetAnimation
+    behaviorTimer?: number;
+    currentBehavior: BehaviorTypes;
+    behaviors: PetBehavior;
 
-    speed: number
+    speed: number;
 
-    targetX?: number
-    targetY?: number
+    targetX?: number;
+    targetY?: number;
 
-    element?: HTMLDivElement
+    element?: HTMLDivElement;
 
-    _animationState?: { frame: number, timer: number }
-
+    _animationState?: { frame: number; timer: number };
 }

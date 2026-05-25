@@ -5,22 +5,24 @@ import type { Pet } from "./models/pet";
 
 const examplePet: Pet = {
     id: 'cat-1',
-    
+
     x: 100,
     y: window.innerHeight - 120,
-    
+
     vx: 1,
     vy: 0.2,
-    
+
     width: 64,
     height: 64,
-    
+
     direction: 1,
-    
-    behavior: 'walk',
-    animation: 'walk',
-    
-    speed: 0.4,
+
+    currentBehavior: 'idle',
+    behaviors: ['walk', 'idle', 'follow', 'sleep', 'walk', 'walk'],
+
+    speed: 0.2,
+    targetVx: 0,
+    targetVy: 0
 }
 
 export function Pets() {

@@ -32,7 +32,7 @@ export class PetEngine {
         this.running = true
 
         if (this.pets.length < 1) return
-        
+
         const loop = (time: number) => {
             if (!this.running) return
 

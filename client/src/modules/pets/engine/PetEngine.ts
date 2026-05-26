@@ -15,6 +15,7 @@ export class PetEngine {
     lastTime = performance.now()
 
     addPet(pet: Pet) {
+        if (this.pets.some(p => p.id === pet.id)) return
         this.pets.push(pet)
     }
 

@@ -1,23 +1,15 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { PetEngine } from "../engine/PetEngine";
 
-export function usePetEngine() {
-    const [engine, setEngine] = useState<PetEngine | null>(null)
+const engine = new PetEngine()
 
-    if (!engine) {
-        setEngine(new PetEngine())
-    }
+export function usePetEngine() {
 
     useEffect(() => {
-        if(!engine) return
-        
         engine.start()
 
-
-        return () => {
-            engine.stop()
-        }
-    }, [engine])
+        return () => engine.stop()
+    }, [])
 
     return engine
 }

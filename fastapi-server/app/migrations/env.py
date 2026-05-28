@@ -15,6 +15,10 @@ from app.models.user_points import User_Point
 from app.models.blackjack import Blackjack
 from app.models.user_themes import User_Theme
 from app.models.messages import Message
+from app.models.pet_instance import Pet_Instance
+from app.models.pet_species import Pet_Species
+from app.models.lootbox import Lootbox
+from app.models.lootbox_open import LootboxOpen
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

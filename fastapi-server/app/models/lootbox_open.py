@@ -5,7 +5,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 
 class LootboxOpen(Base):
-    __table__name = "lootbox_opens"
+    __tablename__ = "lootbox_opens"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
 

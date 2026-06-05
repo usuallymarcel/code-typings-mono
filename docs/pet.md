@@ -195,6 +195,55 @@ That patch alone fixes both Bug A and Bug B in production and dev.
 
 The current `Pet` interface mixes three concerns: **identity** (`id`), **definition** (`width`, `height`, `behaviors`, `speed`, sprite sheets), and **runtime state** (`x`, `y`, `vx`, `direction`, `_animationState`). To get "lots of pets with lots of behaviors with different rarities" we separate them.
 
+### 4.0 The model as shipped today (verbatim)
+
+This is the **actual** [`models/pet.ts`](../client/src/modules/pets/models/pet.ts) at the current commit — the thing the refactor below replaces. Everything in the engine (`behaviors.ts`, `physics.ts`, `collisions.ts`, `animation.ts`) operates on this single flat shape:
+
+```ts
+export type BehaviorTypes = "idle" | "walk" | "follow" | "sleep";
+
+export type PetBehavior = Array<BehaviorTypes>;
+
+export interface Pet {
+    id: string;
+
+    x: number;
+    y: number;
+
+    vx: number;
+    vy: number;
+
+    targetVx: number;
+    targetVy: number;
+
+    width: number;
+    height: number;
+
+    direction: 1 | -1;
+
+    behaviorTimer?: number;
+    currentBehavior: BehaviorTypes;
+    behaviors: PetBehavior;
+
+    speed: number;
+
+    targetX?: number;
+    targetY?: number;
+
+    element?: HTMLDivElement;
+
+    _animationState?: { frame: number; timer: number };
+}
+```
+
+Notes that matter for the refactor:
+
+- **`behaviors` is per-instance**, not per-species — the example cat hardcodes `['walk', 'idle', 'follow', 'sleep', 'walk', 'walk']` in [index.tsx:21](../client/src/modules/pets/index.tsx#L21) (duplicates act as weights — `walk` is 3× as likely). §4.1 lifts this to `PetSpecies.behaviorBag`.
+- **The four behavior ids are `idle` / `walk` / `follow` / `sleep`.** The refactor renames `walk` → `wander` and `follow` → `follow_cursor` (more behaviors become possible once they're plugins). When you read `wander`/`follow_cursor` below, those are the *post-refactor* ids; today's code says `walk`/`follow`.
+- **`_animationState` lives on the `Pet` object** ([animation.ts:50‑57](../client/src/modules/pets/engine/animation.ts#L50-L57)). `RuntimePet` keeps it, but §4 recommends moving render-only state into a parallel map before the model ever crosses the network.
+- **`speed` is a flat `number`** (the example cat uses `0.2`). It becomes `PetSpecies.defaultSpeed`.
+- There is **no `nickname`, `instanceId`, `speciesId`, or any server identity** — the only id is the client-side `id: 'cat-1'`.
+
 ### 4.1 Concepts
 
 - **PetSpecies** — static definition of a kind of pet. Server‑owned, immutable per release. e.g. `species_id = "shadow_fox"`. Defines sprite sheets, animations, default behavior bag, speed, hitbox, rarity, display name, lore.
@@ -341,6 +390,27 @@ export function updateBehavior(pet: RuntimePet, dt: number) {
 }
 ```
 
+`pickWeighted` is the successor to today's `chooseBehavior` ([behaviors.ts:35‑39](../client/src/modules/pets/engine/behaviors.ts#L35-L39)), which does a flat `behaviors[Math.floor(Math.random() * behaviors.length)]`. The new version respects both duplicates-as-weight (kept from today) and the optional `behaviorWeights` multiplier:
+
+```ts
+function pickWeighted(species: PetSpecies): BehaviorId {
+    const bag = species.behaviorBag
+    const overrides = species.behaviorWeights ?? {}
+    // A duplicate in the bag already counts once per appearance; the optional
+    // override multiplies that. e.g. bag=['idle','wander','wander'] with
+    // {wander: 0.5} → effective weights idle:1, wander:0.5, wander:0.5.
+    const entries = bag.map(id => [id, overrides[id] ?? 1] as const)
+    const total = entries.reduce((sum, [, w]) => sum + w, 0)
+    if (total <= 0) return bag[0]
+    let r = Math.random() * total
+    for (const [id, w] of entries) {
+        r -= w
+        if (r <= 0) return id
+    }
+    return bag[bag.length - 1]
+}
+```
+
 ### 4.4 Species manifest
 
 Species are **delivered from the server** so you don't need a client deploy to add a pet. The client fetches `/pets/species` on app start; the response includes sprite‑sheet URLs that are signed/gated for any species the user owns (see §8). For species the user does *not* own, the manifest only includes display metadata + a low‑res "silhouette" preview URL — never the real sprite.
@@ -408,7 +478,7 @@ class PetSpecies(Base):
     enabled: Mapped[bool] = mapped_column(default=True)
 ```
 
-**`app/models/pet_instance.py`**:
+**`app/models/pet_instances.py`**:
 
 ```python
 from sqlalchemy import String, Integer, ForeignKey, DateTime, Boolean, func
@@ -481,27 +551,68 @@ Add migrations via Alembic — same flow as the existing themes/user_themes migr
 `app/crud/pets.py`:
 
 ```python
-def list_user_instances(db, user_id: int) -> list[PetInstance]:
+from sqlalchemy.orm import Session
+from app.models.pet_instances import PetInstance
+
+def list_user_instances(db: Session, user_id: int) -> list[PetInstance]:
     return db.query(PetInstance).filter_by(user_id=user_id).all()
 
-def create_instance(db, user_id: int, species_id: str, source: str) -> PetInstance:
+def get_instance_for_user(db: Session, user_id: int, instance_id: str) -> PetInstance | None:
+    # ownership-scoped lookup — returns None for someone else's pet (callers 404, don't 403)
+    return db.query(PetInstance).filter_by(user_id=user_id, instance_id=instance_id).first()
+
+def create_instance(db: Session, user_id: int, species_id: str, source: str) -> PetInstance:
     inst = PetInstance(user_id=user_id, species_id=species_id, source=source)
     db.add(inst); db.commit(); db.refresh(inst); return inst
 
-def set_active(db, user_id: int, instance_id: str, active: bool) -> PetInstance:
+def set_active(db: Session, user_id: int, instance_id: str, active: bool) -> PetInstance:
     inst = db.query(PetInstance).filter_by(user_id=user_id, instance_id=instance_id).one()
     inst.active = active; db.commit(); db.refresh(inst); return inst
 ```
 
+> `get_instance_for_user` is the ownership gate reused by the interaction endpoints in [pet-interaction.md](./pet-interaction.md). It scopes by `user_id`, so a request for another user's pet returns `None` → 404 (don't leak existence with a 403).
+
 `app/crud/lootboxes.py`:
 
 ```python
-def get_lootbox(db, sku: str) -> Lootbox | None:
+from sqlalchemy.orm import Session
+from app.models.lootbox import Lootbox
+from app.models.lootbox_open import LootboxOpen
+
+RARITY_ORDER = ["common", "uncommon", "rare", "epic", "legendary"]
+
+def get_lootbox(db: Session, sku: str) -> Lootbox | None:
     return db.query(Lootbox).filter_by(sku=sku, enabled=True).first()
 
-def count_opens_since_last_high(db, user_id: int, sku: str, floor: str) -> int:
-    # used for pity timer; see roll() below
-    ...
+def list_enabled(db: Session) -> list[Lootbox]:
+    return db.query(Lootbox).filter_by(enabled=True).all()
+
+def count_opens_since_last_high(db: Session, user_id: int, sku: str, floor: str) -> int:
+    """How many of this SKU the user has opened since they last hit `floor`
+    rarity or above. Drives the pity timer in roll()."""
+    floor_idx = RARITY_ORDER.index(floor)
+    high_rarities = RARITY_ORDER[floor_idx:]
+
+    # Most recent open at or above the floor → everything after it counts as a miss.
+    last_high = (
+        db.query(LootboxOpen)
+        .filter(
+            LootboxOpen.user_id == user_id,
+            LootboxOpen.sku == sku,
+            LootboxOpen.rolled_rarity.in_(high_rarities),
+        )
+        .order_by(LootboxOpen.opened_at.desc())
+        .first()
+    )
+
+    q = db.query(LootboxOpen).filter(
+        LootboxOpen.user_id == user_id,
+        LootboxOpen.sku == sku,
+    )
+    if last_high is not None:
+        q = q.filter(LootboxOpen.opened_at > last_high.opened_at)
+
+    return q.count()
 ```
 
 ### 5.3 Routes
@@ -515,6 +626,7 @@ from pydantic import BaseModel
 from app.database import get_db
 from app.utils.session_tokens import get_session_from_request
 from app.crud import pets as pets_crud
+from app.models.pet_species import PetSpecies
 from app.services.pet_assets import sign_sprite_url  # see §8
 
 router = APIRouter(prefix="/pets", tags=["pets"])
@@ -709,7 +821,7 @@ def open_box(sku: str, request: Request, db = Depends(get_db)):
             "speciesId": species_id,
             "instanceId": instance.instance_id,
             # Sprite URLs are signed here so the client can immediately render it
-            "spriteSheets": sign_sprite_urls_for_species(session.user_id, species_id),
+            "spriteSheets": sign_sprite_urls_for_species(db, session.user_id, species_id),
         },
         "pointsRemaining": pts.points - box.price_points,
     }
@@ -732,52 +844,187 @@ Notes:
 
 ### 7.1 Hooks
 
-`client/src/modules/pets/hooks/usePetSpecies.ts`:
+> **API base URL convention.** This codebase talks to FastAPI directly via `import.meta.env.VITE_FASTAPI_API_URL` with `credentials: 'include'` — there is **no `/api` proxy**. See [`usePoints`](../client/src/modules/points/hooks/usePoints.tsx#L32-L35) and [`ThemeShop`](../client/src/modules/themes/index.tsx#L36) for the pattern. A shared `serverUrl` already exists in [`client/src/utils/env.ts`](../client/src/utils/env.ts). All pet hooks below follow that convention.
+
+First, the shared response/value types these hooks return (extend `models/pet.ts`):
 
 ```ts
-import { useEffect, useState } from 'react'
-import type { PetSpecies } from '../models/pet'
+// models/pet.ts — additions
+export interface SpeciesEntry extends PetSpecies {
+    owned: boolean
+    previewUrl?: string      // present only when !owned
+}
 
-export function usePetSpecies() {
-    const [species, setSpecies] = useState<(PetSpecies & { owned: boolean })[]>([])
-    useEffect(() => {
-        fetch('/api/pets/species', { credentials: 'include' })
-            .then(r => r.json())
-            .then(d => setSpecies(d.species))
-    }, [])
-    return species
+export interface LootboxSummary {
+    sku: string
+    displayName: string
+    pricePoints: number
+    odds: Record<Rarity, number>   // sanitized per-rarity weights (NOT the species pool)
+}
+
+export interface LootboxOpenResult {
+    ok: true
+    rolled: {
+        rarity: Rarity
+        speciesId: string
+        instanceId: string
+        spriteSheets: Record<BehaviorId, string>
+    }
+    pointsRemaining: number
 }
 ```
 
-`client/src/modules/pets/hooks/usePetInventory.ts` — fetches `/pets/inventory`, exposes `setActive(instanceId, active)`.
+`client/src/modules/pets/hooks/usePetSpecies.ts`:
+
+```ts
+import { useCallback, useEffect, useState } from 'react'
+import { serverUrl } from '../../../utils/env'
+import type { SpeciesEntry } from '../models/pet'
+
+export function usePetSpecies() {
+    const [species, setSpecies] = useState<SpeciesEntry[]>([])
+    const [loading, setLoading] = useState(false)
+    const [error, setError] = useState<Error | null>(null)
+
+    const fetchSpecies = useCallback(async () => {
+        try {
+            setLoading(true)
+            setError(null)
+            const res = await fetch(`${serverUrl}/pets/species`, { credentials: 'include' })
+            if (!res.ok) throw new Error(`HTTP ${res.status}`)
+            const data = await res.json()
+            if (!data.ok) throw new Error('Failed to load species')
+            setSpecies(data.species)
+        } catch (err) {
+            setError(err instanceof Error ? err : new Error('Unknown error'))
+        } finally {
+            setLoading(false)
+        }
+    }, [])
+
+    // Refetch on focus so signed sprite URLs stay fresh (they expire after ASSET_TTL).
+    useEffect(() => {
+        fetchSpecies()
+        window.addEventListener('focus', fetchSpecies)
+        return () => window.removeEventListener('focus', fetchSpecies)
+    }, [fetchSpecies])
+
+    return { species, loading, error, refetch: fetchSpecies }
+}
+```
+
+`client/src/modules/pets/hooks/usePetInventory.ts` — owns the user's instances and the active toggle:
+
+```ts
+import { useCallback, useEffect, useState } from 'react'
+import { serverUrl } from '../../../utils/env'
+import type { PetInstance } from '../models/pet'
+
+export function usePetInventory() {
+    const [inventory, setInventory] = useState<PetInstance[]>([])
+    const [loading, setLoading] = useState(false)
+
+    const fetchInventory = useCallback(async () => {
+        setLoading(true)
+        try {
+            const res = await fetch(`${serverUrl}/pets/inventory`, { credentials: 'include' })
+            const data = await res.json()
+            if (data.ok) setInventory(data.pets)
+        } finally {
+            setLoading(false)
+        }
+    }, [])
+
+    useEffect(() => { fetchInventory() }, [fetchInventory])
+
+    const setActive = useCallback(async (instanceId: string, active: boolean) => {
+        // optimistic
+        setInventory(prev =>
+            prev.map(p => (p.instanceId === instanceId ? { ...p, active } : p)))
+        try {
+            const res = await fetch(`${serverUrl}/pets/${instanceId}/active`, {
+                method: 'POST',
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ active }),
+            })
+            if (!res.ok) throw new Error('failed')
+        } catch {
+            await fetchInventory()   // rollback to server truth
+        }
+    }, [fetchInventory])
+
+    return { inventory, loading, setActive, refetch: fetchInventory }
+}
+```
 
 `client/src/modules/pets/hooks/useLootboxes.ts`:
 
 ```ts
+import { useCallback, useEffect, useState } from 'react'
+import { serverUrl } from '../../../utils/env'
+import type { LootboxSummary, LootboxOpenResult } from '../models/pet'
+
 export function useLootboxes() {
     const [boxes, setBoxes] = useState<LootboxSummary[]>([])
     const [opening, setOpening] = useState(false)
 
-    const open = async (sku: string) => {
+    const fetchBoxes = useCallback(async () => {
+        const res = await fetch(`${serverUrl}/lootboxes`, { credentials: 'include' })
+        const data = await res.json()
+        if (data.ok) setBoxes(data.boxes)
+    }, [])
+
+    useEffect(() => { fetchBoxes() }, [fetchBoxes])
+
+    const open = useCallback(async (sku: string): Promise<LootboxOpenResult> => {
         setOpening(true)
         try {
-            const res = await fetch(`/api/lootboxes/${sku}/open`, {
+            const res = await fetch(`${serverUrl}/lootboxes/${sku}/open`, {
                 method: 'POST',
-                headers: { 'Idempotency-Key': crypto.randomUUID() },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Idempotency-Key': crypto.randomUUID(),
+                },
                 credentials: 'include',
             })
-            if (!res.ok) throw new Error((await res.json()).detail ?? 'open failed')
-            return (await res.json()) as LootboxOpenResult
-        } finally { setOpening(false) }
-    }
-    // useEffect to populate `boxes` from GET /lootboxes ...
-    return { boxes, open, opening }
+            const data = await res.json()
+            if (!res.ok || !data.ok) throw new Error(data.detail ?? 'open failed')
+            return data as LootboxOpenResult
+        } finally {
+            setOpening(false)
+        }
+    }, [])
+
+    return { boxes, open, opening, refetch: fetchBoxes }
 }
 ```
 
 ### 7.2 Wiring active pets into the engine
 
-Replace [index.tsx](../client/src/modules/pets/index.tsx) (which hardcodes `examplePet`) with a component that materialises pets from the inventory + species map:
+First, the factory that merges a server `PetInstance` with its `PetSpecies` into the engine's `RuntimePet`.
+
+`client/src/modules/pets/engine/factory.ts` (new):
+
+```ts
+import type { PetInstance, PetSpecies, RuntimePet } from '../models/pet'
+
+export function toRuntimePet(instance: PetInstance, species: PetSpecies): RuntimePet {
+    return {
+        instanceId: instance.instanceId,
+        species,
+        x: Math.random() * (window.innerWidth - species.width),
+        y: window.innerHeight - species.height - 20,
+        vx: 0, vy: 0,
+        targetVx: 0, targetVy: 0,
+        direction: 1,
+        currentBehavior: species.behaviorBag[0] ?? 'idle',
+        behaviorTimer: 0,          // 0 → updateBehavior picks a behavior on the first frame
+    }
+}
+```
+
+Then replace [index.tsx](../client/src/modules/pets/index.tsx) (which hardcodes `examplePet`) with a component that materialises pets from the inventory + species map:
 
 ```tsx
 import { useEffect, useMemo } from 'react'
@@ -786,24 +1033,26 @@ import { usePets } from './hooks/usePets'
 import { usePetSpecies } from './hooks/usePetSpecies'
 import { usePetInventory } from './hooks/usePetInventory'
 import { toRuntimePet } from './engine/factory'
+import type { RuntimePet } from './models/pet'
 
 export function Pets() {
-    const species   = usePetSpecies()
-    const inventory = usePetInventory()
+    const { species }   = usePetSpecies()
+    const { inventory } = usePetInventory()
     const { syncPets, pets } = usePets()
 
-    const active = useMemo(
+    const active = useMemo<RuntimePet[]>(
         () => inventory
             .filter(i => i.active)
             .map(i => {
                 const s = species.find(s => s.speciesId === i.speciesId)
-                return s ? toRuntimePet(i, s) : null
+                // only owned species carry signed spriteSheets; unowned can't render
+                return s && s.owned ? toRuntimePet(i, s) : null
             })
-            .filter(Boolean),
+            .filter((p): p is RuntimePet => p !== null),
         [species, inventory],
     )
 
-    useEffect(() => { syncPets(active as RuntimePet[]) }, [active])
+    useEffect(() => { syncPets(active) }, [active, syncPets])
 
     return (
         <div className="fixed inset-0 pointer-events-none overflow-hidden z-50">
@@ -813,25 +1062,218 @@ export function Pets() {
 }
 ```
 
-`syncPets(targets)` on the engine becomes the single source of truth (replaces `addPet` / `removePet` racing):
+`syncPets(targets)` on the engine becomes the single source of truth (replaces the `addPet` / `removePet` racing in today's [usePets.ts](../client/src/modules/pets/hooks/usePets.ts) + [index.tsx](../client/src/modules/pets/index.tsx)):
 
 ```ts
+// engine/PetEngine.ts
 syncPets(targets: RuntimePet[]) {
     const wanted = new Set(targets.map(t => t.instanceId))
+    // drop pets that are no longer active
     this.pets = this.pets.filter(p => wanted.has(p.instanceId))
+    // add newly-active pets (preserve existing runtime state for ones already present)
     for (const t of targets) {
         if (!this.pets.some(p => p.instanceId === t.instanceId)) this.pets.push(t)
     }
 }
 ```
 
+And `usePets` exposes it (replacing today's `addPet`/`removePet`):
+
+```ts
+// hooks/usePets.ts
+import { useCallback, useState } from 'react'
+import { usePetEngine } from './usePetEngine'
+import type { RuntimePet } from '../models/pet'
+
+export function usePets() {
+    const engine = usePetEngine()
+    const [, setTick] = useState(0)
+
+    const syncPets = useCallback((targets: RuntimePet[]) => {
+        engine.syncPets(targets)
+        setTick(t => t + 1)        // re-render so PetSprite list matches engine.pets
+    }, [engine])
+
+    return { syncPets, pets: engine.pets }
+}
+```
+
+> Note `usePetEngine` must return a non-null module-level singleton (see the §3 patch) so `engine` is never `null` here.
+
 ### 7.3 Lootbox UI
 
-`client/src/modules/pets/components/LootboxStore.tsx` — grid of boxes with price, click → confirm modal → `open()` → reveal animation.
+This codebase already has a modal system ([`useModal`](../client/src/components/modal/ModalContext.tsx)) and a points context ([`usePointsContext`](../client/src/modules/points/contexts/PointsContext.tsx)). The lootbox UI reuses both, mirroring [`ThemeShop`](../client/src/modules/themes/index.tsx).
 
-`client/src/modules/pets/components/LootboxRevealModal.tsx` — accepts the `LootboxOpenResult`, shows a rarity‑coloured burst, the new pet sprite animating, and an "Add to party" button that calls `POST /pets/{instanceId}/active`.
+**`client/src/modules/pets/components/rarity.ts`** — shared rarity → colour map (used by store + reveal):
 
-For the reveal animation **use the sprite sheets the server just signed and returned in the open response** — don't ask the user to wait for a `/pets/species` refetch.
+```ts
+import type { Rarity } from '../models/pet'
+
+export const RARITY_COLOR: Record<Rarity, string> = {
+    common:    '#9ca3af',  // gray-400
+    uncommon:  '#22c55e',  // green-500
+    rare:      '#3b82f6',  // blue-500
+    epic:      '#a855f7',  // purple-500
+    legendary: '#f59e0b',  // amber-500
+}
+```
+
+**`client/src/modules/pets/components/LootboxStore.tsx`** — grid of boxes; click → reveal modal → `open()`:
+
+```tsx
+import { useModal } from '../../../components/modal/ModalContext'
+import { usePointsContext } from '../../points/contexts/PointsContext'
+import { useLootboxes } from '../hooks/useLootboxes'
+import { LootboxRevealModal } from './LootboxRevealModal'
+import { RARITY_COLOR } from './rarity'
+import type { Rarity } from '../models/pet'
+
+export function LootboxStore({ onOpened }: { onOpened?: () => void }) {
+    const { boxes, open, opening } = useLootboxes()
+    const { points, fetchPoints } = usePointsContext()
+    const { openModal } = useModal()
+
+    const handleOpen = async (sku: string) => {
+        if (opening) return
+        try {
+            const result = await open(sku)
+            await fetchPoints()            // points were debited server-side
+            onOpened?.()                   // let parent refetch inventory/species
+            openModal(<LootboxRevealModal result={result} />)
+        } catch (err) {
+            openModal(
+                <p className="text-red-400 p-4">
+                    {(err as Error).message}
+                </p>,
+            )
+        }
+    }
+
+    return (
+        <div className="flex items-center justify-center p-8 [background:var(--bg)] rounded-xl border">
+            <div className="w-full max-w-md">
+                <h2 className="text-xl font-semibold mb-1 text-center">Lootboxes</h2>
+                <h3 className="text-center mb-4 underline font-bold">Points: {points}</h3>
+
+                <div className="flex flex-col gap-3">
+                    {boxes.map(box => {
+                        const isBroke = points != null && points < box.pricePoints
+                        return (
+                            <div key={box.sku} className="border rounded-xl p-3">
+                                <div className="flex justify-between items-center mb-2">
+                                    <span className="font-semibold">{box.displayName}</span>
+                                    <button
+                                        onClick={() => handleOpen(box.sku)}
+                                        disabled={isBroke || opening}
+                                        className={`text-black rounded-xl px-3 py-1 transition-colors duration-100 ${
+                                            isBroke ? 'bg-teal-900 cursor-default' : 'bg-green-600 hover:bg-green-800'
+                                        }`}
+                                    >
+                                        {opening ? '...' : `Open · ${box.pricePoints}`}
+                                    </button>
+                                </div>
+                                {/* transparency: sanitized per-rarity odds from the server */}
+                                <div className="flex gap-2 text-xs">
+                                    {(Object.entries(box.odds) as [Rarity, number][])
+                                        .filter(([, w]) => w > 0)
+                                        .map(([rarity, weight]) => (
+                                            <span key={rarity} style={{ color: RARITY_COLOR[rarity] }}>
+                                                {rarity} {pct(weight, box.odds)}
+                                            </span>
+                                        ))}
+                                </div>
+                            </div>
+                        )
+                    })}
+                </div>
+            </div>
+        </div>
+    )
+}
+
+// weights are relative; normalize to a % for display
+function pct(weight: number, odds: Record<string, number>) {
+    const total = Object.values(odds).reduce((a, b) => a + b, 0)
+    return total ? `${((weight / total) * 100).toFixed(1)}%` : '—'
+}
+```
+
+**`client/src/modules/pets/components/LootboxRevealModal.tsx`** — rarity-coloured reveal that animates the just-won pet using the sprite sheets the open response already returned (no `/pets/species` round-trip):
+
+```tsx
+import { useEffect, useRef, useState } from 'react'
+import { useModal } from '../../../components/modal/ModalContext'
+import { usePetInventory } from '../hooks/usePetInventory'
+import { animations } from '../engine/animation'
+import { RARITY_COLOR } from './rarity'
+import type { LootboxOpenResult } from '../models/pet'
+
+export function LootboxRevealModal({ result }: { result: LootboxOpenResult }) {
+    const { rarity, speciesId, instanceId, spriteSheets } = result.rolled
+    const { closeModal } = useModal()
+    const { setActive, refetch } = usePetInventory()
+    const [added, setAdded] = useState(false)
+
+    // animate the idle sheet so the reveal feels alive (frame stepper, no engine needed)
+    const ref = useRef<HTMLDivElement>(null)
+    useEffect(() => {
+        const anim = animations.idle
+        let frame = 0
+        const id = setInterval(() => {
+            if (!ref.current) return
+            frame = (frame + 1) % anim.frames
+            ref.current.style.backgroundPosition = `-${frame * anim.frameWidth}px 0px`
+        }, 1000 / anim.fps)
+        return () => clearInterval(id)
+    }, [spriteSheets])
+
+    const addToParty = async () => {
+        await setActive(instanceId, true)
+        await refetch()
+        setAdded(true)
+    }
+
+    return (
+        <div
+            className="flex flex-col items-center gap-4 p-8 rounded-xl"
+            style={{ boxShadow: `0 0 40px ${RARITY_COLOR[rarity]}` }}
+        >
+            <span className="uppercase tracking-widest font-bold" style={{ color: RARITY_COLOR[rarity] }}>
+                {rarity}
+            </span>
+
+            <div
+                ref={ref}
+                style={{
+                    width: animations.idle.frameWidth,
+                    height: animations.idle.frameHeight,
+                    transform: 'scale(2)',
+                    imageRendering: 'pixelated',
+                    backgroundImage: `url(${spriteSheets.idle ?? Object.values(spriteSheets)[0]})`,
+                    backgroundRepeat: 'no-repeat',
+                }}
+            />
+
+            <span className="font-semibold">{speciesId}</span>
+
+            <div className="flex gap-2">
+                <button
+                    onClick={addToParty}
+                    disabled={added}
+                    className="text-black bg-green-600 hover:bg-green-800 rounded-xl px-4 py-1"
+                >
+                    {added ? 'Added!' : 'Add to party'}
+                </button>
+                <button onClick={closeModal} className="rounded-xl px-4 py-1 border">
+                    Close
+                </button>
+            </div>
+        </div>
+    )
+}
+```
+
+The reveal uses **the sprite sheets the server signed and returned in the open response** — don't wait for a `/pets/species` refetch. The `LootboxStore`'s `onOpened` callback (or the parent's `usePetSpecies().refetch`) refreshes the rest of the catalog afterward so the newly-owned species shows `owned: true` next time.
 
 ### 7.4 Sprite‑sheet loading
 
@@ -886,26 +1328,45 @@ Never include `fastapi-server/pet_assets/` in the client build pipeline.
 
 Don't proxy bytes through Python per request — sign URLs and let your reverse proxy (nginx/caddy/CDN) serve them. The signature is HMAC over `(user_id, species_id, behavior, expiry)` using a server secret:
 
+First add the two settings to [`app/config.py`](../fastapi-server/app/config.py). The existing `Env` is a `pydantic_settings.BaseSettings` with `case_sensitive=False`, so the env vars are `PET_ASSET_SECRET` / `PET_ASSETS_DIR` but the **Python attributes are lowercase** (`env.pet_asset_secret`) — same as the existing `env.database_url`:
+
+```python
+class Env(BaseSettings):
+    database_url: str
+    pet_asset_secret: str      # 32+ random bytes, from PET_ASSET_SECRET in .env
+    pet_assets_dir: str        # absolute path to the sprite store, from PET_ASSETS_DIR
+
+    model_config = SettingsConfigDict(
+        env_file='.env', case_sensitive=False, extra='ignore'
+    )
+```
+
 `app/services/pet_assets.py`:
 
 ```python
 import hmac, hashlib, time, base64
+from sqlalchemy.orm import Session
 from app.config import env
+from app.models.pet_species import PetSpecies
 
-ASSET_SECRET = env.PET_ASSET_SECRET  # 32+ random bytes, server-only
-ASSET_TTL    = 60 * 60               # 1 hour
+ASSET_TTL = 60 * 60   # 1 hour
 
 def sign_sprite_url(user_id: int, species_id: str, behavior: str) -> str:
     exp = int(time.time()) + ASSET_TTL
     payload = f"{user_id}|{species_id}|{behavior}|{exp}"
-    sig = hmac.new(ASSET_SECRET.encode(), payload.encode(), hashlib.sha256).digest()
+    sig = hmac.new(env.pet_asset_secret.encode(), payload.encode(), hashlib.sha256).digest()
     sig_b64 = base64.urlsafe_b64encode(sig).rstrip(b"=").decode()
     return f"/pet-assets/{species_id}/{behavior}.png?uid={user_id}&exp={exp}&sig={sig_b64}"
 
-def sign_sprite_urls_for_species(user_id: int, species_id: str) -> dict[str, str]:
-    species = ...  # load PetSpecies
-    return {beh: sign_sprite_url(user_id, species_id, beh) for beh in species.config["animations"]}
+def sign_sprite_urls_for_species(db: Session, user_id: int, species_id: str) -> dict[str, str]:
+    species = db.query(PetSpecies).filter_by(species_id=species_id).one()
+    return {
+        beh: sign_sprite_url(user_id, species_id, beh)
+        for beh in species.config["animations"].keys()
+    }
 ```
+
+> `sign_sprite_urls_for_species` now takes `db` so it can load the species' animation keys. Update the two callers in §6.2 (`sign_sprite_urls_for_species(db, session.user_id, species_id)`).
 
 ### 8.3 Verification
 
@@ -919,11 +1380,12 @@ from fastapi.responses import FileResponse
 import hmac, hashlib, base64, time, os
 from app.config import env
 from app.database import get_db
+from app.models.pet_instances import PetInstance
 from app.utils.session_tokens import get_session_from_request
 
 router = APIRouter(prefix="/pet-assets", tags=["pet-assets"])
 
-ASSETS_DIR = os.path.abspath(env.PET_ASSETS_DIR)
+ASSETS_DIR = os.path.abspath(env.pet_assets_dir)
 
 @router.get("/{species_id}/{behavior}.png")
 def serve_sprite(species_id: str, behavior: str, request: Request, db = Depends(get_db)):
@@ -940,7 +1402,7 @@ def serve_sprite(species_id: str, behavior: str, request: Request, db = Depends(
 
     payload = f"{uid}|{species_id}|{behavior}|{exp}".encode()
     expected = base64.urlsafe_b64encode(
-        hmac.new(env.PET_ASSET_SECRET.encode(), payload, hashlib.sha256).digest()
+        hmac.new(env.pet_asset_secret.encode(), payload, hashlib.sha256).digest()
     ).rstrip(b"=").decode()
     if not hmac.compare_digest(expected, sig): raise HTTPException(403)
 
@@ -1032,7 +1494,7 @@ Adding a new pet is now: drop 4 PNGs in `fastapi-server/pet_assets/<species_id>/
 - [ ] `app/services/lootbox_roll.py` (CSPRNG + pity).
 - [ ] `app/services/pet_assets.py` (HMAC signing).
 - [ ] `app/routes/pets.py`, `app/routes/lootboxes.py`, `app/routes/pet_assets.py`.
-- [ ] `PET_ASSET_SECRET`, `PET_ASSETS_DIR` in [app/config.py](../fastapi-server/app/config.py).
+- [ ] Add `pet_asset_secret` + `pet_assets_dir` fields to the `Env` class in [app/config.py](../fastapi-server/app/config.py) (read from `PET_ASSET_SECRET` / `PET_ASSETS_DIR` in `.env`; access as lowercase `env.pet_asset_secret`).
 - [ ] Register routers in [main.py](../fastapi-server/app/main.py#L4).
 - [ ] Data migration: seed two species + one lootbox + grant free `cat` to existing users.
 - [ ] Idempotency‑Key cache for `/lootboxes/{sku}/open`.

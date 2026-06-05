@@ -539,9 +539,12 @@ def test_rarity_weights_cover_referenced_rarities(db):
 A registered‑behavior check has to live in the client (Vitest):
 
 ```ts
+import { serverUrl } from '../../../utils/env'   // VITE_FASTAPI_API_URL — no /api proxy
+
 test('every behavior referenced by any species is registered', async () => {
     await import('../engine/behaviors')   // forces self-registration
-    const res = await fetch('/api/pets/species').then(r => r.json())
+    const res = await fetch(`${serverUrl}/pets/species`, { credentials: 'include' })
+        .then(r => r.json())
     const referenced = new Set<string>()
     for (const s of res.species) for (const b of s.behaviorBag) referenced.add(b)
     for (const id of referenced) expect(getBehavior(id)).toBeDefined()

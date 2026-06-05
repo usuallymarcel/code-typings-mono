@@ -11,6 +11,7 @@ This document covers the full design: the input layer (mouse/touch on a pet), th
 1. [Design philosophy: what "alive" means](#1-design-philosophy-what-alive-means)
 2. [The four layers](#2-the-four-layers)
 3. [Vital signs: the stats system](#3-vital-signs-the-stats-system)
+   - [3.5 Food quality → the happiness/poop economy](#35-food-quality--the-happinesspoop-economy)
 4. [Database additions](#4-database-additions)
 5. [The interaction framework](#5-the-interaction-framework)
 6. [Built‑in interactions in detail](#6-builtin-interactions-in-detail)
@@ -20,8 +21,9 @@ This document covers the full design: the input layer (mouse/touch on a pet), th
    - [6.4 Clean (poo cleanup)](#64-clean-poo-cleanup)
    - [6.5 Talk / call](#65-talk--call)
 7. [Pooping: the autonomous side](#7-pooping-the-autonomous-side)
+   - [7.6 Serving + rendering poos (`/pets/{id}/state`)](#76-serving--rendering-poos--the-petsidstate-endpoint)
 8. [Reaction behaviors (FSM extensions)](#8-reaction-behaviors-fsm-extensions)
-9. [Food and item inventory](#9-food-and-item-inventory)
+9. [Food shop and inventory](#9-food-shop-and-inventory)
 10. [Security, anti‑cheat, rate limits](#10-security-anticheat-rate-limits)
 11. [UI: vitals, notifications, accessibility](#11-ui-vitals-notifications-accessibility)
 12. [Extending the system](#12-extending-the-system)
@@ -143,6 +145,40 @@ Stats roll up into a derived **mood**:
 
 Mood is computed on every `/pets/state` read; the client mutates behavior weights at render time, not in the engine. Keeps the engine itself dumb.
 
+### 3.5 Food quality → the happiness/poop economy
+
+This is the core loop the feeding + pooping systems create. **Every food has a `quality` from 1 (poor) to 5 (gourmet).** Quality is not the same as how *filling* a food is (`effects.hunger`): cheap food can fill the belly while making the pet miserable.
+
+Quality drives two things at feed time:
+
+| Quality | Label | Happiness on feed | Digestion (poop frequency) |
+|---|---|---|---|
+| 1 | Poor | **−8** | Gut is wrecked → poops ~3× as often |
+| 2 | Cheap | **−3** | Poops noticeably more often |
+| 3 | Standard | **+1** | Neutral baseline |
+| 4 | Premium | **+5** | Poops a bit less often |
+| 5 | Gourmet | **+10** | Clean gut → poops least often |
+
+The chain that makes a neglected pet *feel* neglected:
+
+```
+feed cheap food  ──▶  happiness ↓ (instant)         ──▶ mood drifts to `sad`
+                 └─▶  digestion_quality ↓ (rolling)  ──▶ poop interval shrinks
+                                                      ──▶ more poos pile up on screen
+                                                      ──▶ cleanliness ↓ (−10 per uncleaned poo)
+                                                      ──▶ mood drifts to `dirty`
+                                                      ──▶ player must clean (time sink) or buy better food (points sink)
+```
+
+So the player has a real economic decision every feed: **spend few points on junk** (fills hunger now, but you'll be mopping up poop and cheering up a sad pet), or **spend more points on quality** (keeps the pet happy and the screen clean). That tension is the whole game.
+
+Two pieces of persistent state make this work, both on `pet_stats` (see §4):
+
+- **`digestion_quality`** — a rolling average (EMA) of recent food quality, range 1–5, default 3.0. The poop scheduler reads it: low digestion → short interval → more poop. It decays *toward* whatever you've been feeding, so one gourmet meal won't instantly undo a week of scraps.
+- **`next_poo_at`** — the scheduled time of the next poo. Junk food (`quality ≤ 2`) also yanks this forward for **instant** visible feedback ("you fed it garbage, here's a poop in 30 seconds").
+
+Implementation lives in the feed handler (§6.3) and the poop scheduler (§7.1).
+
 ---
 
 ## 4. Database additions
@@ -172,6 +208,11 @@ class PetStats(Base):
     happiness:   Mapped[float] = mapped_column(Float, nullable=False, default=70.0)
     cleanliness: Mapped[float] = mapped_column(Float, nullable=False, default=90.0)
     bond:        Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+
+    # Rolling average of recent food quality (1=poor .. 5=gourmet), default "standard".
+    # Drives poop frequency in schedule_next_poo (§7.1). Does NOT decay on its own —
+    # it only moves when the pet is fed (§6.3).
+    digestion_quality: Mapped[float] = mapped_column(Float, nullable=False, default=3.0)
 
     snapshot_at: Mapped["DateTime"] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
@@ -254,11 +295,13 @@ class FoodItem(Base):
     display_name: Mapped[str] = mapped_column(String(64), nullable=False)
     price_points: Mapped[int] = mapped_column(Integer, nullable=False)
     icon_key: Mapped[str] = mapped_column(String(64), nullable=False)
+    quality: Mapped[int] = mapped_column(Integer, nullable=False, default=3)  # 1=poor .. 5=gourmet
     effects: Mapped[dict] = mapped_column(JSON, nullable=False)
     enabled: Mapped[bool] = mapped_column(default=True)
 ```
 
-`effects` is JSON: `{ "hunger": +30, "happiness": +5, "energy": +10 }`.
+- **`quality`** (1–5) drives happiness-on-feed and poop frequency per the economy in [§3.5](#35-food-quality--the-happinesspoop-economy). It is **server-owned** — the client never sends it.
+- **`effects`** is the *nutritional* payload, applied on top of the quality-driven happiness. JSON with **plain numbers** (JSON has no leading `+`, so write `15` not `+15`; negatives like `-5` are fine): `{ "hunger": 30, "energy": 10 }`. `happiness` may appear here too and is *added to* the quality happiness; `bond` is ignored (bond is earned, never fed).
 
 ### `user_food_inventory`
 
@@ -282,6 +325,48 @@ Yes you could merge food into one big "items" table for future expandability (to
 ---
 
 ## 5. The interaction framework
+
+### 5.0 Shared helpers (new files)
+
+The interaction code below imports two helpers that don't exist yet. They're thin and shared, so they live in `client/src/shared/`. Both honour this codebase's convention: talk to FastAPI via `import.meta.env.VITE_FASTAPI_API_URL` (exported as `serverUrl` from [`utils/env.ts`](../client/src/utils/env.ts)) with `credentials: 'include'` — **no `/api` proxy** (see [`usePoints`](../client/src/modules/points/hooks/usePoints.tsx)).
+
+**`client/src/shared/api.ts`**:
+
+```ts
+import { serverUrl } from '../utils/env'
+
+async function request<T>(method: string, path: string, body?: unknown, headers: Record<string, string> = {}): Promise<T> {
+    const res = await fetch(`${serverUrl}${path}`, {
+        method,
+        credentials: 'include',
+        headers: body ? { 'Content-Type': 'application/json', ...headers } : headers,
+        body: body ? JSON.stringify(body) : undefined,
+    })
+    const data = await res.json().catch(() => ({}))
+    if (!res.ok || data?.ok === false) {
+        // FastAPI puts errors in `detail` (string or object)
+        const detail = typeof data?.detail === 'string' ? data.detail : (data?.detail?.reason ?? `HTTP ${res.status}`)
+        throw Object.assign(new Error(detail), { status: res.status, detail: data?.detail })
+    }
+    return data as T
+}
+
+export const api = {
+    get:  <T>(path: string) => request<T>('GET', path),
+    post: <T>(path: string, body?: unknown, headers?: Record<string, string>) => request<T>('POST', path, body, headers),
+    // mutating interactions (feed) pass an idempotency key — see §10.3
+    idempotencyKey: () => crypto.randomUUID(),
+}
+```
+
+**`client/src/shared/toast.ts`** — minimal, or wire to whatever toast/notification surface exists. The interaction code only needs `showToast(message)`:
+
+```ts
+export function showToast(message: string) {
+    // Replace with the app's real notification system. Stub keeps the dispatcher honest.
+    console.warn('[toast]', message)
+}
+```
 
 ### 5.1 Client: the registry
 
@@ -344,7 +429,13 @@ The single entry point bound to pet pointer events.
 **`client/src/modules/pets/interactions/dispatcher.ts`**:
 
 ```ts
-import { interactionsFor, getInteraction, type InteractionContext } from './registry'
+import {
+    interactionsFor,
+    getInteraction,
+    type InteractionContext,
+    type InteractionDef,
+    type InteractionTrigger,
+} from './registry'
 import { pushBehavior } from '../engine/behaviorRegistry'
 import { showToast } from '../../../shared/toast'
 
@@ -526,7 +617,8 @@ def interact(instance_id: str, body: InteractBody, request: Request, db: Session
         "delta": result.delta,
         "stats": result.new_stats,
         "reaction": result.reaction,
-        "cooldownMs": result.cooldown_ms ?? handler.cooldown_ms,
+        # Python has no ?? operator — fall back to the handler's default cooldown.
+        "cooldownMs": result.cooldown_ms if result.cooldown_ms is not None else handler.cooldown_ms,
     }
 ```
 
@@ -712,17 +804,37 @@ registerInteraction({
             interaction_id: 'feed',
             payload: { itemId: payload!.itemId },
         }),
-    onResult({ pet }, r) {
-        // Pet should walk toward the drop point, then eat
-        // The reaction behavior 'eating' is auto-pushed by the dispatcher
+    onResult({ payload }, _r) {
+        // The reaction (`eating` or `disgust`) is auto-pushed by the dispatcher from
+        // r.reaction. Tell the food UI a unit was consumed so the badge updates without
+        // a refetch round-trip (see FoodInventory in §9.2).
+        window.dispatchEvent(
+            new CustomEvent('pet:fed', { detail: { itemId: payload!.itemId } }),
+        )
     },
 })
 ```
 
-**Server** (`fastapi-server/app/services/interactions/feed_handler.py`):
+The drop is wired in [`PetSprite`](../client/src/modules/pets/components/PetSprite.tsx) (§5.3): `onDrop` reads `application/x-pet-item` and dispatches `'drop_item'` with `payload: { itemId }`. The `feed` interaction is the only one registered for that trigger, so it handles it.
+
+**Server** (`fastapi-server/app/services/interactions/feed_handler.py`). This is the heart of the food-quality economy ([§3.5](#35-food-quality--the-happinesspoop-economy)):
 
 ```python
+import random
+from datetime import datetime, timezone, timedelta
+
+from fastapi import HTTPException
+
 from app.crud.food import get_food, consume_one
+from app.crud.pet_stats import snapshot as _snapshot   # serialize current stats → dict
+from app.services.interactions.registry import register, Handler, InteractionResult
+
+# Quality 1 (poor) .. 5 (gourmet) → instant happiness change on feed.
+QUALITY_HAPPINESS = {1: -8.0, 2: -3.0, 3: 1.0, 4: 5.0, 5: 10.0}
+
+# How fast recent food dominates the rolling digestion average. 0.4 → a single
+# meal moves digestion_quality ~40% of the way toward that food's quality.
+DIGESTION_EMA_ALPHA = 0.4
 
 def handle_feed(db, user_id, inst, stats, payload):
     item_id = (payload or {}).get("itemId")
@@ -733,38 +845,69 @@ def handle_feed(db, user_id, inst, stats, payload):
     if not food or not food.enabled:
         raise HTTPException(404, "Unknown food")
 
-    # Inventory check + atomic decrement
+    # Inventory check + atomic decrement (race-free, see consume_one below).
     if not consume_one(db, user_id, item_id):
         raise HTTPException(400, "You don't have any of that")
 
-    # Apply effects, clamping to [0,100]
     delta: dict[str, float] = {}
-    for stat, change in food.effects.items():
-        if not hasattr(stats, stat) or stat == "bond":
-            continue   # bond is earned, not fed
-        current = getattr(stats, stat)
-        new_val = max(0.0, min(100.0, current + change))
-        setattr(stats, stat, new_val)
-        delta[stat] = new_val - current
 
-    # Feeding always accrues a little bond
+    # 1. Nutritional effects (hunger/energy/...). Skip bond + happiness — handled below.
+    for stat, change in (food.effects or {}).items():
+        if not hasattr(stats, stat) or stat in ("bond", "happiness"):
+            continue
+        current = getattr(stats, stat)
+        new_val = max(0.0, min(100.0, current + float(change)))
+        setattr(stats, stat, new_val)
+        delta[stat] = round(new_val - current, 2)
+
+    # 2. Happiness is QUALITY-driven, then nudged by any explicit effects.happiness.
+    #    Cheap food (quality 1–2) is a NET NEGATIVE → an unhappy pet.
+    happiness_change = QUALITY_HAPPINESS.get(food.quality, 0.0)
+    happiness_change += float((food.effects or {}).get("happiness", 0.0))
+    before = stats.happiness
+    stats.happiness = max(0.0, min(100.0, stats.happiness + happiness_change))
+    delta["happiness"] = round(stats.happiness - before, 2)
+
+    # 3. Bond: a small fixed reward just for being cared for.
     stats.bond = min(1000.0, stats.bond + 2.0)
     delta["bond"] = 2.0
 
+    # 4. Digestion: roll the quality EMA. Low values → schedule_next_poo fires sooner (§7.1).
+    stats.digestion_quality = (
+        (1 - DIGESTION_EMA_ALPHA) * stats.digestion_quality
+        + DIGESTION_EMA_ALPHA * float(food.quality)
+    )
+
+    # 5. Junk food (quality <= 2) upsets the tummy NOW: pull the next poo forward so the
+    #    consequence is visible within ~20–90s, not just statistically later.
+    if food.quality <= 2:
+        soon = datetime.now(timezone.utc) + timedelta(seconds=random.uniform(20, 90))
+        if stats.next_poo_at is None or soon < stats.next_poo_at:
+            stats.next_poo_at = soon
+
+    # Quality also picks the reaction: a happy chomp vs. a disgusted gag.
+    reaction_id = "eating" if food.quality >= 3 else "disgust"
     return InteractionResult(
         delta=delta,
         new_stats=_snapshot(stats),
-        reaction={"behaviorId": "eating", "durationMs": 2500},
+        reaction={"behaviorId": reaction_id, "durationMs": 2500},
     )
 
 register(Handler(id="feed", cooldown_ms=3000, requires_item="any_food", fn=handle_feed))
 ```
 
-**`consume_one`** in `crud/food.py`:
+Notes:
+
+- **The client never sends stat deltas.** It sends `itemId`; the server looks up the food's quality/effects and decides everything. A forged `payload.delta` is ignored ([§10.1](#101-the-threat-model)).
+- **`disgust`** is a new reaction behavior (add it to the table in [§8](#8-reaction-behaviors-fsm-extensions)) — pet recoils, a little 🤢 particle. Falls back to `idle` if a species has no `disgust` sheet.
+- `consume_one` lives in `crud/food.py` — the full module is in [§9.1](#91-server-crud-and-routes).
+
+The atomic decrement that makes double-feed race-free:
 
 ```python
+# crud/food.py (excerpt — full module in §9.1)
 def consume_one(db, user_id: int, item_id: str) -> bool:
-    """Atomic decrement. Returns False if user has none."""
+    """Atomic decrement. Returns False if the user has none."""
     rows = db.execute(
         update(UserFoodInventory)
             .where(
@@ -774,10 +917,11 @@ def consume_one(db, user_id: int, item_id: str) -> bool:
             )
             .values(quantity=UserFoodInventory.quantity - 1)
     ).rowcount
+    db.commit()
     return rows > 0
 ```
 
-Single‑statement UPDATE with the `quantity > 0` guard makes this race‑free without explicit locks. If the user clicks feed twice in 100 ms, only one decrement succeeds — the other returns `False` and the request 400s cleanly.
+Single-statement UPDATE with the `quantity > 0` guard makes this race-free without explicit locks. If the user clicks feed twice in 100 ms, only one decrement succeeds — the other returns `False` and the request 400s cleanly.
 
 ### 6.4 Clean (poo cleanup)
 
@@ -793,21 +937,25 @@ registerInteraction({
     trigger: 'click',           // attached to <PooSprite>
     cooldownMs: 500,            // generous — they're cleaning, let them go
     optimistic({ payload }) {
-        spawnParticles({ kind: 'sparkles', ...payload!.poo, count: 8 })
-        // Remove the poo from local store immediately (will be re-added on error)
-        removePooLocal(payload!.pooId as string)
+        spawnParticles({ kind: 'sparkles', ...(payload!.poo as { x: number; y: number }), count: 8 })
+        // Remove the poo locally right away. `removeLocal` / `rollback` are supplied by
+        // <PooSprite> via the dispatch payload (§7.6) — they map to the owning pet's
+        // usePetState. Optimistic UI without a global poo store.
+        ;(payload!.removeLocal as (() => void) | undefined)?.()
     },
     request: ({ pet, payload }) =>
         api.post(`/pets/${pet.instanceId}/interact`, {
             interaction_id: 'clean',
-            payload: { pooId: payload!.pooId },
+            payload: { pooId: payload!.pooId },   // only the id crosses the wire
         }),
     onError({ payload }) {
-        // Roll back optimistic removal
-        refetchPoos()
+        // Server rejected (already cleaned / cooldown) — restore truth from the server.
+        ;(payload!.rollback as (() => void) | undefined)?.()
     },
 })
 ```
+
+> Only `pooId` is sent to the server; `poo`, `removeLocal`, and `rollback` are client-only payload fields used for optimistic rendering and never serialized into the request body.
 
 **Server handler** marks the poo cleaned and adjusts stats:
 
@@ -856,69 +1004,86 @@ The pet poops on its own schedule. Server‑authoritative because it depends on 
 
 ### 7.1 Scheduling
 
-When `pet_stats.next_poo_at` is `NULL` or in the past, compute the next poo time:
+All poop logic lives in `fastapi-server/app/services/pet_poo.py` so the feed handler, the state route, and tests share one source of truth.
+
+When `pet_stats.next_poo_at` is `NULL` or in the past, compute the next poo time. The interval is shaped by **hunger** (starving pets have nothing to process) and **digestion quality** (cheap food → frequent poop — the [§3.5](#35-food-quality--the-happinesspoop-economy) economy):
 
 ```python
+# fastapi-server/app/services/pet_poo.py
 import random
 from datetime import datetime, timezone, timedelta
 
+from app.models.pet_stats import PetStats
+
 POO_INTERVAL_MIN = timedelta(minutes=45)
 POO_INTERVAL_MAX = timedelta(hours=3)
+MAX_POOS_PER_READ = 5          # welcome-back cap (§7.2)
 
-def schedule_next_poo(stats: PetStats):
-    # Pets that aren't being fed don't poo. If hunger < 20, push out further.
-    hunger_factor = max(0.3, stats.hunger / 100)  # 1.0 at full, 0.3 at starving
+def schedule_next_poo(stats: PetStats) -> None:
     base = random.uniform(POO_INTERVAL_MIN.total_seconds(), POO_INTERVAL_MAX.total_seconds())
-    stats.next_poo_at = datetime.now(timezone.utc) + timedelta(seconds=base / hunger_factor)
+
+    # Starving pets poo less: hunger 100 → 1.0 (normal), hunger 0 → ~3.3 (much longer).
+    hunger_factor = max(0.3, stats.hunger / 100)
+
+    # Digestion drives frequency. digestion_quality 3 (standard) is neutral (1.0);
+    # 1 (junk) → 0.35 → poops ~3× as often; 5 (gourmet) → 1.67 → poops less.
+    digestion_factor = max(0.35, min(1.8, stats.digestion_quality / 3.0))
+
+    seconds = (base / hunger_factor) * digestion_factor
+    stats.next_poo_at = datetime.now(timezone.utc) + timedelta(seconds=seconds)
 ```
+
+With the average base interval (~112 min), a full-hunger pet poops roughly every **~40 min on a scraps diet** (digestion ≈ 1 → factor 0.35) versus every **~3 h on gourmet** (digestion ≈ 5 → factor 1.67). Since `digestion_quality` is an EMA it won't sit at the extremes after one meal, but a steady cheap-food habit pushes it down and keeps the screen covered — the visible "more poop" the cheap-food path promises.
 
 ### 7.2 Generation (lazy, on read)
 
 On every `/pets/state` read, **after** decay is applied, check for due poos:
 
 ```python
+# fastapi-server/app/services/pet_poo.py (continued)
+from app.models.pet_instances import PetInstance
+from app.models.pet_poos import PetPoo
+
 def maybe_generate_poos(db, inst: PetInstance, stats: PetStats) -> list[PetPoo]:
-    new_poos: list[PetPoo] = []
     if stats.next_poo_at is None:
         schedule_next_poo(stats)
         return []
 
     now = datetime.now(timezone.utc)
+    new_poos: list[PetPoo] = []
+
+    # Loop because the user may have been offline for hours and accumulated several.
     while stats.next_poo_at <= now:
-        # Spawn at a random screen-ish position. The client will resolve to a real
-        # spot (clamped to its actual viewport) on receipt — we just give a hint.
-        new_poos.append(PetPoo(
-            pet_instance_id=inst.id,
-            user_id=inst.user_id,
-            x=random.uniform(50, 1800),   # rough; client clamps to viewport
-            y=random.uniform(200, 900),
-        ))
+        if len(new_poos) < MAX_POOS_PER_READ:
+            # Spawn at a rough screen position; the client clamps to its real viewport.
+            new_poos.append(PetPoo(
+                pet_instance_id=inst.id,
+                user_id=inst.user_id,
+                x=random.uniform(50, 1800),
+                y=random.uniform(200, 900),
+            ))
+        # Always advance the clock, even past the cap, so we don't re-spill next read.
         schedule_next_poo(stats)
 
-    db.add_all(new_poos)
+    if new_poos:
+        db.add_all(new_poos)
     return new_poos
 ```
 
-We loop because the user may have been offline for 12 hours and accumulated several poos. Cap at e.g. 5 per read to avoid a hilarious 200‑poo welcome‑back screen — anything past that is silently dropped (the missed time still advances `next_poo_at`).
+The `MAX_POOS_PER_READ` cap avoids a hilarious 200-poo welcome-back screen — anything past 5 is silently dropped, but `next_poo_at` still advances past all the missed events so they don't re-spawn on the next read.
 
 ### 7.3 Uncleaned poo penalty
 
-The decay step takes uncleaned poo count into account:
+The key coupling: **the more uncleaned poos on screen, the faster cleanliness rots.** The decay step scales the cleanliness loss by the live uncleaned count, so a screen full of cheap-food poop drags the pet toward the `dirty` mood quickly:
 
 ```python
-def apply_decay(stats: PetStats, uncleaned_poos: int):
-    elapsed = min(now() - stats.snapshot_at, MAX_DECAY_WINDOW)
-    hours = elapsed.total_seconds() / 3600
-
-    cleanliness_decay = (0.3 + 0.5 * uncleaned_poos) * hours
-    stats.cleanliness = max(0.0, stats.cleanliness - cleanliness_decay)
-    stats.hunger    = max(0.0, stats.hunger    - 1.0 * hours)
-    stats.happiness = max(0.0, stats.happiness - 0.5 * hours)
-    # energy: special-cased (decay only when awake) — omitted for brevity
-    stats.snapshot_at = now()
+cleanliness_decay = (0.3 + 0.5 * uncleaned_poos) * hours
+#                    ^base       ^+0.5/hour per uncleaned poo
 ```
 
-The server's "poos on screen" count comes from `SELECT COUNT(*) FROM pet_poos WHERE user_id=? AND cleaned_at IS NULL`. Index `(user_id, cleaned_at)` makes it instant.
+This lives inside `apply_decay` — the **canonical, runnable implementation is in [§7.6](#76-serving--rendering-poos--the-petsidstate-endpoint)** (`app/crud/pet_stats.py`), which also decays hunger/happiness/energy and uses `datetime.now(timezone.utc)`. The state route passes the count: `apply_decay(stats, count_uncleaned(db, user_id))`.
+
+The "poos on screen" count comes from `SELECT COUNT(*) FROM pet_poos WHERE user_id=? AND cleaned_at IS NULL` (`crud.pet_poos.count_uncleaned`). Index `(user_id, cleaned_at)` makes it instant.
 
 ### 7.4 Pet behavior change before pooping
 
@@ -935,6 +1100,309 @@ You could. But then:
 
 Server‑side poos are ~50 bytes per row. Fine.
 
+### 7.6 Serving + rendering poos — the `/pets/{id}/state` endpoint
+
+This is what turns the server's poo rows into 💩 on the screen. It's referenced all over this doc; here's the full implementation, backend and frontend.
+
+#### Stats CRUD — `app/crud/pet_stats.py`
+
+```python
+from datetime import datetime, timezone, timedelta
+from sqlalchemy.orm import Session
+from app.models.pet_stats import PetStats
+
+MAX_DECAY_WINDOW = timedelta(hours=8)   # offline grace (§3.3)
+
+def get_or_create_stats(db: Session, pet_instance_id: int) -> PetStats:
+    stats = db.query(PetStats).filter_by(pet_instance_id=pet_instance_id).first()
+    if not stats:
+        stats = PetStats(pet_instance_id=pet_instance_id)
+        db.add(stats); db.commit(); db.refresh(stats)
+    return stats
+
+def apply_decay(stats: PetStats, uncleaned_poos: int = 0) -> None:
+    """Lazy decay (§3.2). Mutates in place; caller commits. The cleanliness penalty
+    scales with how many poos are currently sitting uncleaned on screen."""
+    now = datetime.now(timezone.utc)
+    elapsed = min(now - stats.snapshot_at, MAX_DECAY_WINDOW)
+    hours = elapsed.total_seconds() / 3600
+
+    cleanliness_decay = (0.3 + 0.5 * uncleaned_poos) * hours   # more poo → faster filth
+    stats.cleanliness = max(0.0, stats.cleanliness - cleanliness_decay)
+    stats.hunger      = max(0.0, stats.hunger    - 1.0 * hours)
+    stats.happiness   = max(0.0, stats.happiness - 0.5 * hours)
+    stats.energy      = max(0.0, stats.energy    - 0.8 * hours)  # simplification: always awake
+    stats.snapshot_at = now
+
+def write_stats(db: Session, stats: PetStats) -> None:
+    db.add(stats)   # already session-attached; persisted on the caller's commit
+
+def snapshot(stats: PetStats) -> dict:
+    """Serialize the (already decayed) stats to the client shape. Handlers import this
+    as `_snapshot` — e.g. `from app.crud.pet_stats import snapshot as _snapshot`."""
+    return {
+        "hunger":      round(stats.hunger, 1),
+        "energy":      round(stats.energy, 1),
+        "happiness":   round(stats.happiness, 1),
+        "cleanliness": round(stats.cleanliness, 1),
+        "bond":        round(stats.bond, 1),
+    }
+
+def compute_mood(stats: PetStats) -> str:
+    """The §3.4 thresholds, evaluated worst-first."""
+    if stats.energy < 30:      return "tired"
+    if stats.hunger < 30:      return "hungry"
+    if stats.happiness < 30:   return "sad"
+    if stats.cleanliness < 30: return "dirty"
+    if min(stats.hunger, stats.energy, stats.happiness, stats.cleanliness) >= 60:
+        return "happy"
+    return "content"
+```
+
+#### Poo CRUD — `app/crud/pet_poos.py`
+
+```python
+from datetime import datetime, timezone
+from sqlalchemy.orm import Session
+from app.models.pet_poos import PetPoo
+
+def list_uncleaned(db: Session, user_id: int) -> list[PetPoo]:
+    return db.query(PetPoo).filter_by(user_id=user_id, cleaned_at=None).all()
+
+def count_uncleaned(db: Session, user_id: int) -> int:
+    return db.query(PetPoo).filter_by(user_id=user_id, cleaned_at=None).count()
+
+def clean_one(db: Session, user_id: int, poo_id: int) -> bool:
+    poo = db.query(PetPoo).filter_by(id=poo_id, user_id=user_id, cleaned_at=None).first()
+    if not poo:
+        return False
+    poo.cleaned_at = datetime.now(timezone.utc)
+    return True
+```
+
+> `handle_clean` (§6.4) can call `clean_one(db, user_id, poo_id)` instead of inlining the query.
+
+#### The state route — add to `app/routes/pet_interactions.py`
+
+```python
+from datetime import datetime, timezone, timedelta
+
+from app.crud.pets import get_instance_for_user
+from app.crud.pet_stats import (
+    get_or_create_stats, apply_decay, write_stats, snapshot as _snapshot, compute_mood,
+)
+from app.crud.pet_poos import list_uncleaned, count_uncleaned
+from app.crud.pet_interaction_log import last_occurrence
+from app.services.pet_poo import maybe_generate_poos
+from app.services.interactions import registry as interactions
+
+@router.get("/{instance_id}/state")
+def state(instance_id: str, request: Request, db: Session = Depends(get_db)):
+    session = get_session_from_request(db, request)
+
+    inst = get_instance_for_user(db, session.user_id, instance_id)
+    if not inst:
+        raise HTTPException(404, "Pet not found")
+
+    stats = get_or_create_stats(db, inst.id)
+
+    # decay first (cleanliness penalty needs the live uncleaned count), then spawn due poos
+    uncleaned_count = count_uncleaned(db, session.user_id)
+    apply_decay(stats, uncleaned_count)
+    maybe_generate_poos(db, inst, stats)   # mutates stats.next_poo_at, adds rows
+    write_stats(db, stats)
+    db.commit()
+
+    now = datetime.now(timezone.utc)
+    pending = stats.next_poo_at is not None and (stats.next_poo_at - now) <= timedelta(seconds=5)
+
+    return {
+        "ok": True,
+        "state": {
+            "instanceId": inst.instance_id,
+            "stats": _snapshot(stats),
+            "mood": compute_mood(stats),
+            "poos": [
+                {"id": p.id, "x": p.x, "y": p.y, "createdAt": p.created_at.isoformat()}
+                for p in list_uncleaned(db, session.user_id)
+            ],
+            "pendingPoo": pending,
+            "cooldowns": _active_cooldowns(db, inst.id),
+        },
+    }
+
+def _active_cooldowns(db, pet_instance_id: int) -> dict[str, int]:
+    """Per-interaction ms remaining, so the client can grey out buttons."""
+    out: dict[str, int] = {}
+    now = datetime.now(timezone.utc)
+    for h in interactions.all_handlers():
+        last = last_occurrence(db, pet_instance_id, h.id)
+        if last:
+            remaining = h.cooldown_ms - int((now - last).total_seconds() * 1000)
+            if remaining > 0:
+                out[h.id] = remaining
+    return out
+```
+
+Add `all_handlers()` to the handler registry (§5.4):
+
+```python
+def all_handlers() -> list[Handler]:
+    return list(_handlers.values())
+```
+
+#### Client hook — `client/src/modules/pets/hooks/usePetState.ts`
+
+```ts
+import { useCallback, useEffect, useState } from 'react'
+import { serverUrl } from '../../../utils/env'
+
+export interface Poo { id: number; x: number; y: number; createdAt: string }
+export interface Stats { hunger: number; energy: number; happiness: number; cleanliness: number; bond: number }
+export type Mood = 'happy' | 'content' | 'tired' | 'hungry' | 'sad' | 'dirty'
+
+export interface PetState {
+    instanceId: string
+    stats: Stats
+    mood: Mood
+    poos: Poo[]
+    pendingPoo: boolean
+    cooldowns: Record<string, number>
+}
+
+const POLL_MS = 30_000   // stats decay slowly; 30s is plenty
+
+export function usePetState(instanceId: string | null) {
+    const [state, setState] = useState<PetState | null>(null)
+
+    const fetchState = useCallback(async () => {
+        if (!instanceId) return
+        const res = await fetch(`${serverUrl}/pets/${instanceId}/state`, { credentials: 'include' })
+        const data = await res.json()
+        if (data.ok) setState(data.state)
+    }, [instanceId])
+
+    useEffect(() => {
+        if (!instanceId) return
+        fetchState()
+        const id = setInterval(fetchState, POLL_MS)
+        window.addEventListener('focus', fetchState)   // catch up after the tab was hidden
+        return () => { clearInterval(id); window.removeEventListener('focus', fetchState) }
+    }, [instanceId, fetchState])
+
+    // optimistic removal for the clean interaction (rolled back via refetch on error)
+    const removePooLocal = useCallback((pooId: number) => {
+        setState(s => (s ? { ...s, poos: s.poos.filter(p => p.id !== pooId) } : s))
+    }, [])
+
+    return { state, refetch: fetchState, removePooLocal }
+}
+```
+
+#### Poo sprite — `client/src/modules/pets/components/PooSprite.tsx`
+
+```tsx
+import { dispatch } from '../interactions/dispatcher'
+import type { Poo } from '../hooks/usePetState'
+import type { RuntimePet } from '../models/pet'
+
+export function PooSprite({
+    poo, pet, removeLocal, rollback,
+}: {
+    poo: Poo
+    pet: RuntimePet
+    removeLocal: () => void   // optimistic remove from the owning pet's state
+    rollback: () => void      // re-fetch truth if the server rejects
+}) {
+    return (
+        <div
+            className="absolute pointer-events-auto cursor-pointer select-none"
+            style={{
+                transform: `translate(${poo.x}px, ${poo.y}px)`,
+                fontSize: 24,
+                willChange: 'transform',
+            }}
+            title="Clean me!"
+            onClick={e =>
+                dispatch(
+                    'click',
+                    {
+                        pet,
+                        pointer: { x: e.clientX, y: e.clientY },
+                        // poo/removeLocal/rollback are client-only; only pooId is sent (§6.4)
+                        payload: { pooId: poo.id, poo: { x: poo.x, y: poo.y }, removeLocal, rollback },
+                    },
+                    'clean',   // explicit id → run the `clean` handler, not the pet `click`
+                )
+            }
+        >
+            💩
+        </div>
+    )
+}
+```
+
+#### Per-pet layer — `client/src/modules/pets/components/PetStateLayer.tsx`
+
+One per active pet. Renders its poos + vitals and runs the pre-poo comedy beat.
+
+```tsx
+import { useEffect } from 'react'
+import { usePetState } from '../hooks/usePetState'
+import { PooSprite } from './PooSprite'
+import { PetVitals } from './PetVitals'
+import { pushBehavior } from '../engine/behaviorRegistry'
+import type { RuntimePet } from '../models/pet'
+
+export function PetStateLayer({ pet }: { pet: RuntimePet }) {
+    const { state, refetch, removePooLocal } = usePetState(pet.instanceId)
+
+    // When a poo is imminent (pendingPoo), squat for 3s, then refetch to reveal it.
+    useEffect(() => {
+        if (!state?.pendingPoo) return
+        pushBehavior(pet, 'about_to_poo', 3000)
+        const t = setTimeout(refetch, 3200)
+        return () => clearTimeout(t)
+    }, [state?.pendingPoo, pet, refetch])
+
+    if (!state) return null
+
+    return (
+        <>
+            {state.poos.map(poo => (
+                <PooSprite
+                    key={poo.id}
+                    poo={poo}
+                    pet={pet}
+                    removeLocal={() => removePooLocal(poo.id)}
+                    rollback={refetch}
+                />
+            ))}
+            <PetVitals pet={pet} stats={state.stats} mood={state.mood} />
+        </>
+    )
+}
+```
+
+#### Wiring into the overlay
+
+Add `<PetStateLayer>` alongside `<PetSprite>` in the `Pets` overlay from [pet.md §7.2](./pet.md#72-wiring-active-pets-into-the-engine):
+
+```tsx
+return (
+    <div className="fixed inset-0 pointer-events-none overflow-hidden z-50">
+        {pets.map(p => (
+            <Fragment key={p.instanceId}>
+                <PetSprite pet={p} />
+                <PetStateLayer pet={p} />   {/* poos + vitals + pre-poo beat */}
+            </Fragment>
+        ))}
+    </div>
+)
+```
+
+Because each `PetStateLayer` owns its pet's `usePetState`, there's no global poo store and no cross-pet coupling — cleaning a poo optimistically updates exactly the pet that owns it.
+
 ---
 
 ## 8. Reaction behaviors (FSM extensions)
@@ -948,7 +1416,8 @@ Built‑in interactions reference these behavior ids. Each is a one‑file behav
 | `falling` | dropped from height | Gravity Y, arms/tail flailing animation | until floor |
 | `landed` | dropped from low height | Squish, dust puff | 600 ms |
 | `dizzy` | after `play` | Stars over head, slow random nudges | 800 ms |
-| `eating` | `feed` | Sits, chomp animation, particles | 2500 ms |
+| `eating` | `feed` (quality ≥ 3) | Sits, chomp animation, particles | 2500 ms |
+| `disgust` | `feed` (quality ≤ 2) | Recoils, 🤢 particle, eats reluctantly | 2500 ms |
 | `tail_wag` | `clean` | Walk animation in place | 800 ms |
 | `come_here` | `call` | Like `follow`, but with the right‑click position as target | 3000 ms |
 | `about_to_poo` | imminent poo | Pet squats and looks around shiftily | 3000 ms |
@@ -960,59 +1429,350 @@ Each is ~30 lines. They mostly differ in: which sprite sheet to use (set via spe
 
 ---
 
-## 9. Food and item inventory
+## 9. Food shop and inventory
 
-### 9.1 Buying food
+Food is the points sink that powers the [§3.5](#35-food-quality--the-happinesspoop-economy) economy: buy food with points, drag it onto the pet to feed. Cheap food is a trap (unhappy pet + poop to clean); quality food costs more points but keeps the pet happy and the screen clean.
 
-Food is bought with points, same as themes/lootboxes. New route `app/routes/food.py`:
+### 9.1 Server: CRUD and routes
+
+**`app/crud/food.py`** — full module:
 
 ```python
-@router.get("")
-def list_food(request, db = Depends(get_db)):
-    get_session_from_request(db, request)
-    return {"ok": True, "items": [
-        {"itemId": f.item_id, "displayName": f.display_name,
-         "pricePoints": f.price_points, "iconKey": f.icon_key,
-         "effects": f.effects}
-        for f in db.query(FoodItem).filter_by(enabled=True).all()
-    ]}
+from sqlalchemy import update
+from sqlalchemy.orm import Session
+from app.models.food_items import FoodItem
+from app.models.user_food_inventory import UserFoodInventory
 
-@router.post("/{item_id}/buy")
-def buy_food(item_id: str, qty: int = 1, request = ..., db = Depends(get_db)):
-    session = get_session_from_request(db, request)
-    if qty < 1 or qty > 99: raise HTTPException(400, "1-99 only")
-    food = get_food(db, item_id)
-    if not food or not food.enabled: raise HTTPException(404)
-    pts = get_points_by_user_id(db, session.user_id)
-    total = food.price_points * qty
-    if pts.points < total: raise HTTPException(400, "Not enough points")
-    update_user_points(db, session.user_id, pts.points - total)
-    add_food(db, session.user_id, item_id, qty)
-    return {"ok": True, "quantity": current_quantity(db, session.user_id, item_id),
-            "pointsRemaining": pts.points - total}
+def list_food(db: Session) -> list[FoodItem]:
+    return (db.query(FoodItem)
+              .filter_by(enabled=True)
+              .order_by(FoodItem.price_points)
+              .all())
 
-@router.get("/inventory")
-def my_food(request, db = Depends(get_db)):
-    session = get_session_from_request(db, request)
-    rows = db.query(UserFoodInventory).filter_by(user_id=session.user_id).all()
-    return {"ok": True, "items": [{"itemId": r.item_id, "quantity": r.quantity} for r in rows]}
+def get_food(db: Session, item_id: str) -> FoodItem | None:
+    return db.query(FoodItem).filter_by(item_id=item_id).first()
+
+def current_quantity(db: Session, user_id: int, item_id: str) -> int:
+    row = db.query(UserFoodInventory).filter_by(user_id=user_id, item_id=item_id).first()
+    return row.quantity if row else 0
+
+def add_food(db: Session, user_id: int, item_id: str, qty: int) -> int:
+    row = db.query(UserFoodInventory).filter_by(user_id=user_id, item_id=item_id).first()
+    if row:
+        row.quantity += qty
+    else:
+        row = UserFoodInventory(user_id=user_id, item_id=item_id, quantity=qty)
+        db.add(row)
+    db.commit()
+    return row.quantity
+
+def consume_one(db: Session, user_id: int, item_id: str) -> bool:
+    """Atomic decrement used by the feed handler (§6.3). Race-free via the
+    `quantity > 0` guard — two concurrent feeds can't both succeed."""
+    rows = db.execute(
+        update(UserFoodInventory)
+            .where(
+                UserFoodInventory.user_id == user_id,
+                UserFoodInventory.item_id == item_id,
+                UserFoodInventory.quantity > 0,
+            )
+            .values(quantity=UserFoodInventory.quantity - 1)
+    ).rowcount
+    db.commit()
+    return rows > 0
 ```
 
-### 9.2 Seed catalog
+**`app/routes/food.py`** — full router. Buying mirrors the existing themes flow ([themes.py:54‑80](../fastapi-server/app/routes/themes.py#L54-L80)) but supports a quantity:
+
+```python
+from fastapi import APIRouter, Depends, HTTPException, Request
+
+from app.database import get_db
+from app.utils.session_tokens import get_session_from_request
+from app.crud.user_points import get_points_by_user_id, update_user_points
+from app.crud.food import list_food, get_food, add_food, current_quantity
+from app.models.user_food_inventory import UserFoodInventory
+
+router = APIRouter(prefix="/food", tags=["food"])
+
+def _food_dto(f) -> dict:
+    return {
+        "itemId": f.item_id,
+        "displayName": f.display_name,
+        "pricePoints": f.price_points,
+        "iconKey": f.icon_key,
+        "quality": f.quality,        # 1..5 — drives the UI quality stars + warnings
+        "effects": f.effects,
+    }
+
+@router.get("")
+def catalog(request: Request, db = Depends(get_db)):
+    get_session_from_request(db, request)
+    return {"ok": True, "items": [_food_dto(f) for f in list_food(db)]}
+
+@router.post("/{item_id}/buy")
+def buy_food(item_id: str, request: Request, qty: int = 1, db = Depends(get_db)):
+    session = get_session_from_request(db, request)
+    if qty < 1 or qty > 99:
+        raise HTTPException(400, "Quantity must be 1–99")
+
+    food = get_food(db, item_id)
+    if not food or not food.enabled:
+        raise HTTPException(404, "Unknown food")
+
+    pts = get_points_by_user_id(db, session.user_id)
+    total = food.price_points * qty
+    if pts.points < total:
+        raise HTTPException(400, "Not enough points")
+
+    update_user_points(db, session.user_id, pts.points - total)
+    qty_now = add_food(db, session.user_id, item_id, qty)
+
+    return {
+        "ok": True,
+        "itemId": item_id,
+        "quantity": qty_now,
+        "pointsRemaining": pts.points - total,
+    }
+
+@router.get("/inventory")
+def my_food(request: Request, db = Depends(get_db)):
+    session = get_session_from_request(db, request)
+    rows = db.query(UserFoodInventory).filter_by(user_id=session.user_id).all()
+    return {"ok": True, "items": [
+        {"itemId": r.item_id, "quantity": r.quantity}
+        for r in rows if r.quantity > 0
+    ]}
+```
+
+Register it in [main.py](../fastapi-server/app/main.py):
+
+```python
+from app.routes import food
+app.include_router(food.router)
+```
+
+> **Debit/grant atomicity.** Like the existing themes route, this isn't wrapped in one transaction. For points that's acceptable (a crash leaves the user with points and no food — recoverable). If you want belt-and-suspenders, wrap debit + `add_food` the way `/lootboxes/{sku}/open` does in [pet.md §6.2](./pet.md#62-route--approuteslootboxespy), and accept an `Idempotency-Key` (§10.3).
+
+### 9.2 Seed catalog (with quality)
+
+The ladder below is the whole point: a cheap, filling, **low-quality** option (`scraps`) that's a false economy, up to an expensive **gourmet** one. Note `effects` JSON uses **plain numbers** — no leading `+` (invalid JSON); negatives are fine.
 
 ```python
 # in an Alembic data migration
-INSERT INTO food_items (item_id, display_name, price_points, icon_key, effects, enabled) VALUES
-    ('kibble',      'Kibble',      5,   'kibble',      '{"hunger":+15}',                           true),
-    ('premium_can', 'Premium Can', 25,  'can',         '{"hunger":+40,"happiness":+5}',            true),
-    ('treat',       'Treat',       10,  'treat',       '{"hunger":+5,"happiness":+15}',            true),
-    ('coffee',      'Coffee',      20,  'mug',         '{"energy":+30,"happiness":-5}',            true),
-    ('cake',        'Birthday Cake', 200, 'cake',      '{"hunger":+30,"happiness":+40,"energy":+10}', true)
+INSERT INTO food_items (item_id, display_name, price_points, icon_key, quality, effects, enabled) VALUES
+    ('scraps',        'Table Scraps',  2,   'scraps', 1, '{"hunger":20}',                      true),
+    ('kibble',        'Kibble',        5,   'kibble', 2, '{"hunger":15}',                      true),
+    ('tasty_bowl',    'Tasty Bowl',    12,  'bowl',   3, '{"hunger":25,"happiness":3}',        true),
+    ('premium_can',   'Premium Can',   25,  'can',    4, '{"hunger":40}',                      true),
+    ('gourmet_feast', 'Gourmet Feast', 60,  'feast',  5, '{"hunger":50}',                      true),
+    ('treat',         'Treat',         10,  'treat',  4, '{"hunger":5}',                       true),
+    ('coffee',        'Coffee',        20,  'mug',    2, '{"energy":30}',                      true),
+    ('cake',          'Birthday Cake', 200, 'cake',   5, '{"hunger":30,"energy":10,"happiness":10}', true)
 ```
 
-### 9.3 UI
+How the ladder plays out at feed time (quality happiness from [§3.5](#35-food-quality--the-happinesspoop-economy), added to any `effects.happiness`):
 
-A small `FoodInventory` panel at the bottom of the screen. Each food is draggable (`draggable=true`, `onDragStart` sets `dataTransfer.setData('application/x-pet-item', itemId)`). Drop it on a pet → fires the `feed` interaction. Empty? Click → opens the food shop.
+| Food | Price | Quality | Hunger | Net happiness | Poop tendency |
+|---|---|---|---|---|---|
+| Table Scraps | 2 | ★☆☆☆☆ | +20 | **−8** | floods the screen |
+| Kibble | 5 | ★★☆☆☆ | +15 | **−3** | frequent |
+| Tasty Bowl | 12 | ★★★☆☆ | +25 | +1 (+3) = **+4** | baseline |
+| Premium Can | 25 | ★★★★☆ | +40 | **+5** | reduced |
+| Gourmet Feast | 60 | ★★★★★ | +50 | **+10** | rare |
+
+`coffee` (quality 2) is the deliberate gag: cheap energy, but it makes the pet a bit miserable *and* poop more — exactly like real life.
+
+### 9.3 Client: the `useFood` hook
+
+`client/src/modules/pets/hooks/useFood.ts`:
+
+```ts
+import { useCallback, useEffect, useState } from 'react'
+import { serverUrl } from '../../../utils/env'
+
+export interface FoodItem {
+    itemId: string
+    displayName: string
+    pricePoints: number
+    iconKey: string
+    quality: number                       // 1..5
+    effects: Record<string, number>
+}
+
+export function useFood() {
+    const [catalog, setCatalog] = useState<FoodItem[]>([])
+    const [inventory, setInventory] = useState<Record<string, number>>({})
+
+    const fetchCatalog = useCallback(async () => {
+        const res = await fetch(`${serverUrl}/food`, { credentials: 'include' })
+        const data = await res.json()
+        if (data.ok) setCatalog(data.items)
+    }, [])
+
+    const fetchInventory = useCallback(async () => {
+        const res = await fetch(`${serverUrl}/food/inventory`, { credentials: 'include' })
+        const data = await res.json()
+        if (data.ok) {
+            const map: Record<string, number> = {}
+            for (const it of data.items) map[it.itemId] = it.quantity
+            setInventory(map)
+        }
+    }, [])
+
+    useEffect(() => { fetchCatalog(); fetchInventory() }, [fetchCatalog, fetchInventory])
+
+    // Decrement locally when the pet is fed (the `pet:fed` event from feed.ts, §6.3).
+    useEffect(() => {
+        const onFed = (e: Event) => {
+            const itemId = (e as CustomEvent).detail?.itemId as string
+            setInventory(prev => ({ ...prev, [itemId]: Math.max(0, (prev[itemId] ?? 0) - 1) }))
+        }
+        window.addEventListener('pet:fed', onFed)
+        return () => window.removeEventListener('pet:fed', onFed)
+    }, [])
+
+    const buy = useCallback(async (itemId: string, qty = 1) => {
+        const res = await fetch(`${serverUrl}/food/${itemId}/buy?qty=${qty}`, {
+            method: 'POST',
+            credentials: 'include',
+        })
+        const data = await res.json()
+        if (!res.ok || !data.ok) throw new Error(data.detail ?? 'buy failed')
+        setInventory(prev => ({ ...prev, [itemId]: data.quantity }))
+        return data as { quantity: number; pointsRemaining: number }
+    }, [])
+
+    return { catalog, inventory, buy, refetch: fetchInventory }
+}
+```
+
+### 9.4 Client: the `FoodShop` component
+
+Reuses the points context and matches [`ThemeShop`](../client/src/modules/themes/index.tsx). Open it from the `FoodInventory` panel's "＋" button (§9.5) or anywhere the points display lives.
+
+`client/src/modules/pets/components/FoodShop.tsx`:
+
+```tsx
+import { useState } from 'react'
+import { usePointsContext } from '../../points/contexts/PointsContext'
+import { useFood, type FoodItem } from '../hooks/useFood'
+
+const QUALITY_LABEL = ['', 'Poor', 'Cheap', 'Standard', 'Premium', 'Gourmet']
+const stars = (q: number) => '★'.repeat(q) + '☆'.repeat(5 - q)
+
+export function FoodShop() {
+    const { catalog, inventory, buy } = useFood()
+    const { points, fetchPoints } = usePointsContext()
+    const [error, setError] = useState<string | null>(null)
+
+    const handleBuy = async (item: FoodItem) => {
+        try {
+            await buy(item.itemId, 1)
+            await fetchPoints()          // points were debited server-side
+            setError(null)
+        } catch (e) {
+            setError((e as Error).message)
+        }
+    }
+
+    return (
+        <div className="flex items-center justify-center p-8 [background:var(--bg)] rounded-xl border">
+            <div className="w-full max-w-lg">
+                <h2 className="text-xl font-semibold mb-1 text-center">Food Shop</h2>
+                <h3 className="text-center mb-4 underline font-bold">Points: {points}</h3>
+                {error && <p className="text-red-400 text-center mb-2">{error}</p>}
+
+                <div className="flex flex-col gap-2">
+                    {catalog.map(item => {
+                        const broke = points != null && points < item.pricePoints
+                        return (
+                            <div
+                                key={item.itemId}
+                                className="grid grid-cols-[1fr_auto_auto] gap-3 items-center border rounded-xl px-3 py-2"
+                            >
+                                <div>
+                                    <div className="font-semibold">{item.displayName}</div>
+                                    <div className="text-xs opacity-70">
+                                        {stars(item.quality)} {QUALITY_LABEL[item.quality]}
+                                        {item.quality <= 2 && ' · upsets tummy 💩'}
+                                    </div>
+                                </div>
+                                <span className="text-sm opacity-70">have {inventory[item.itemId] ?? 0}</span>
+                                <button
+                                    onClick={() => handleBuy(item)}
+                                    disabled={broke}
+                                    className={`text-black rounded-xl px-3 py-1 ${
+                                        broke ? 'bg-teal-900 cursor-default' : 'bg-green-600 hover:bg-green-800'
+                                    }`}
+                                >
+                                    Buy · {item.pricePoints}
+                                </button>
+                            </div>
+                        )
+                    })}
+                </div>
+            </div>
+        </div>
+    )
+}
+```
+
+### 9.5 Client: the `FoodInventory` panel (drag-to-feed)
+
+A floating tray of owned food. Each tile is draggable; dropping it on a pet fires the `feed` interaction ([§6.3](#63-feed)). The "＋" button opens the shop in a modal.
+
+`client/src/modules/pets/components/FoodInventory.tsx`:
+
+```tsx
+import { useFood } from '../hooks/useFood'
+import { useModal } from '../../../components/modal/ModalContext'
+import { FoodShop } from './FoodShop'
+
+// icon_key → emoji fallback until real sprite icons exist
+const FOOD_EMOJI: Record<string, string> = {
+    scraps: '🦴', kibble: '🥣', bowl: '🍲', can: '🥫',
+    feast: '🍖', treat: '🍪', mug: '☕', cake: '🎂',
+}
+
+export function FoodInventory() {
+    const { catalog, inventory } = useFood()
+    const { openModal } = useModal()
+
+    const owned = catalog.filter(c => (inventory[c.itemId] ?? 0) > 0)
+
+    return (
+        <div className="fixed bottom-2 left-1/2 -translate-x-1/2 flex gap-2 items-end pointer-events-auto z-50">
+            {owned.map(item => (
+                <div
+                    key={item.itemId}
+                    draggable
+                    onDragStart={e =>
+                        e.dataTransfer.setData('application/x-pet-item', item.itemId)
+                    }
+                    className="relative w-12 h-12 border rounded-lg grid place-items-center cursor-grab select-none [background:var(--bg)]"
+                    title={`${item.displayName} — quality ${item.quality}/5`}
+                >
+                    <span className="text-2xl">{FOOD_EMOJI[item.iconKey] ?? '🍽️'}</span>
+                    <span className="absolute -bottom-1 -right-1 text-xs bg-black/70 text-white rounded-full px-1">
+                        {inventory[item.itemId]}
+                    </span>
+                </div>
+            ))}
+
+            <button
+                onClick={() => openModal(<FoodShop />)}
+                className="w-12 h-12 border rounded-lg grid place-items-center [background:var(--bg)]"
+                title="Open food shop"
+            >
+                ＋
+            </button>
+        </div>
+    )
+}
+```
+
+Mount it once, next to the `Pets` overlay (e.g. in [App.tsx](../client/src/App.tsx)). The drag payload key `application/x-pet-item` is exactly what `PetSprite`'s `onDrop` reads in [§5.3](#53-client-wiring-pointer-events).
 
 ---
 
@@ -1026,6 +1786,8 @@ A small `FoodInventory` panel at the bottom of the screen. Each food is draggabl
 | Spam‑click `clean` after auto‑spawning poos client‑side | Poos only exist server‑side; `clean` validates the poo row. |
 | Replay a successful feed response without the food | `consume_one` is an atomic UPDATE with `quantity > 0` guard. |
 | POST `feed` with `payload.delta = {happiness: 9999}` | Server **ignores client‑sent deltas**. Stats only move through registered handlers. |
+| Feed junk but send `payload.quality = 5` to dodge the unhappiness + extra poop | `quality` and `effects` are read **only** from the `food_items` row by `itemId`; the client never supplies them. The payload carries `itemId` and nothing stat-bearing. |
+| Buy food, then forge an `/food/.../buy` response to fake inventory | Inventory is server-truth in `user_food_inventory`; `consume_one` validates the real row at feed time, so a faked balance feeds nothing. |
 | Call `/pets/{id}/interact` on someone else's pet | `get_instance_for_user(db, session.user_id, instance_id)` returns None → 404. |
 | Open many tabs to multiply effective cooldown | Cooldown is keyed on `(pet_instance_id, interaction_id)` server‑side; tabs share. |
 | Inflate `bond` via long automated play sessions | `play` cooldown is 10 s + 8 pts happiness = `energy` floor kicks in within minutes; pet falls asleep. Diminishing returns built in. |
@@ -1055,9 +1817,12 @@ A small floating element that appears next to the active pet on hover, showing f
 
 ```tsx
 // client/src/modules/pets/components/PetVitals.tsx
-export function PetVitals({ pet, stats }) {
+const MOOD_EMOJI = { happy: '😀', content: '🙂', tired: '😴', hungry: '🍽️', sad: '😢', dirty: '🦨' }
+
+export function PetVitals({ pet, stats, mood }) {
     return (
         <div className="absolute pointer-events-none" style={vitalsPosition(pet)}>
+            <div className="text-center text-sm">{MOOD_EMOJI[mood]} {mood}</div>
             <Bar value={stats.hunger}      color={stats.hunger < 30 ? 'red' : 'green'}  label="🍖" />
             <Bar value={stats.energy}      color={stats.energy < 30 ? 'orange' : 'blue'} label="⚡" />
             <Bar value={stats.happiness}   color={stats.happiness < 30 ? 'red' : 'pink'} label="❤️" />
@@ -1067,6 +1832,8 @@ export function PetVitals({ pet, stats }) {
     )
 }
 ```
+
+The `mood` here is exactly what `/pets/{id}/state` returns (server-computed in `compute_mood`, §7.6) and what `PetStateLayer` (§7.6) passes down — so a pet fed nothing but scraps visibly reads `😢 sad` / `🦨 dirty`.
 
 ### 11.2 Notifications
 
@@ -1112,7 +1879,7 @@ Heavier — touches the schema.
 1. Alembic migration adds `thirst` column to `pet_stats`, default 80.
 2. Update `apply_decay` to decay thirst.
 3. Update mood computation to include thirst thresholds.
-4. Add `water_bowl` food (effects: `{"thirst": +50}`) to the catalog.
+4. Add `water_bowl` food (effects: `{"thirst": 50}` — plain JSON number, no leading `+`) to the catalog.
 5. Update the UI `PetVitals` bar layout.
 
 Test the operational guardrails in [pets-usage.md §8](./pets-usage.md#operational-tests-to-keep-in-ci): make sure existing food still works (their effects JSON doesn't reference `thirst`, which is fine — handler skips unknown stats).
@@ -1169,6 +1936,51 @@ def test_feed_without_food_fails_and_does_not_change_stats(client, user, pet_ful
     stats = get_or_create_stats(db, pet.id)
     assert stats.hunger == 80.0   # unchanged
 
+def test_low_quality_food_lowers_happiness(client, user, pet, scraps_inventory_1):
+    before = get_or_create_stats(db, pet.id).happiness
+    r = client.post(f"/pets/{pet.instance_id}/interact",
+                    json={"interaction_id": "feed", "payload": {"itemId": "scraps"}})
+    assert r.json()["delta"]["happiness"] == -8.0   # quality-1 penalty
+    assert get_or_create_stats(db, pet.id).happiness == before - 8.0
+
+def test_high_quality_food_raises_happiness(client, user, pet, gourmet_inventory_1):
+    r = client.post(f"/pets/{pet.instance_id}/interact",
+                    json={"interaction_id": "feed", "payload": {"itemId": "gourmet_feast"}})
+    assert r.json()["delta"]["happiness"] == 10.0   # quality-5 bonus
+
+def test_junk_food_brings_next_poo_forward(client, user, pet, scraps_inventory_1):
+    set_next_poo(pet, hours_from_now=2)
+    client.post(f"/pets/{pet.instance_id}/interact",
+                json={"interaction_id": "feed", "payload": {"itemId": "scraps"}})
+    stats = get_or_create_stats(db, pet.id)
+    # scraps pulls the next poo to within ~90s, far sooner than the original 2h
+    assert (stats.next_poo_at - now_utc()).total_seconds() <= 90
+
+def test_quality_drives_digestion_ema(client, user, pet, scraps_inventory_3):
+    # repeatedly feeding quality-1 food drags digestion_quality down from 3.0
+    for _ in range(3):
+        client.post(f"/pets/{pet.instance_id}/interact",
+                    json={"interaction_id": "feed", "payload": {"itemId": "scraps"}})
+        advance_clock(seconds=4)   # clear the 3s feed cooldown
+    assert get_or_create_stats(db, pet.id).digestion_quality < 2.0
+
+def test_buy_food_debits_points_and_grants_inventory(client, user_with_points_100):
+    r = client.post("/food/kibble/buy?qty=3")
+    assert r.json()["pointsRemaining"] == 100 - 5 * 3
+    assert r.json()["quantity"] == 3
+
+def test_buy_food_insufficient_points_no_debit(client, user_with_points_1):
+    r = client.post("/food/gourmet_feast/buy")
+    assert r.status_code == 400
+    assert get_points_by_user_id(db, user.id).points == 1   # untouched
+
+def test_feed_ignores_client_supplied_quality(client, user, pet, scraps_inventory_1):
+    # forging quality in the payload must not dodge the unhappiness penalty
+    r = client.post(f"/pets/{pet.instance_id}/interact",
+                    json={"interaction_id": "feed",
+                          "payload": {"itemId": "scraps", "quality": 5, "delta": {"happiness": 99}}})
+    assert r.json()["delta"]["happiness"] == -8.0   # server read quality from the row
+
 def test_stats_decay_lazily(client, user, pet):
     advance_clock(hours=10)
     state = client.get(f"/pets/{pet.instance_id}/state").json()
@@ -1222,7 +2034,11 @@ test('held pet does not get physics-updated', () => {
 
 - [ ] Click cat 10 times rapidly — see exactly 2–3 happiness updates (cooldown working), particles every click.
 - [ ] Drag cat across screen, drop low — gentle landing. Drop from top — fall + landed reaction.
-- [ ] Drop kibble on cat — eat animation, hunger up, kibble inventory down.
+- [ ] Buy food in the shop — points drop, quantity appears in the `FoodInventory` tray.
+- [ ] Drop kibble on cat — eat animation, hunger up, inventory badge down.
+- [ ] Feed Table Scraps (quality 1) — pet reacts with `disgust`, happiness drops, and a poo appears within ~90 s.
+- [ ] Feed Gourmet Feast (quality 5) — happy `eating`, happiness up, no early poo.
+- [ ] Spend a few minutes feeding only cheap food — watch poos pile up and cleanliness/mood slide to `dirty`/`sad`.
 - [ ] Wait ~5 min of activity, observe a poo appears.
 - [ ] Click poo — cleared, sparkles, cleanliness up.
 - [ ] Close tab for 30 min, reopen — stats decayed but pet is alive.
@@ -1241,10 +2057,10 @@ test('held pet does not get physics-updated', () => {
 | | `pet_handler.py` server, `pet.ts` client, `happy_bounce` reaction behavior, vitals chip wired to `/pets/{id}/state`, particles infra. End‑to‑end smoke test. | |
 | 3 | Pickup + drop | 1 d |
 | | Physics gate for `_heldByUser`, `falling`/`landed`/`held_wiggle` behaviors, gravity, `play` interaction. | |
-| 4 | Food + feed | 2 d |
-| | Food catalog + buy + inventory routes. Drag‑drop UI. `feed_handler.py`. `eating` behavior. Seed catalog of 5 foods. | |
+| 4 | Food + feed + quality economy | 2 d |
+| | `food_items.quality` + `pet_stats.digestion_quality`. Food catalog + buy + inventory routes. `FoodShop` + drag‑drop `FoodInventory`. `feed_handler.py` (quality → happiness + digestion). `eating`/`disgust` behaviors. Seed 8 foods across tiers 1–5. | |
 | 5 | Pooping + cleaning | 1 d |
-| | `next_poo_at` scheduling, lazy `maybe_generate_poos`, `<PooSprite>` component, `clean` interaction, cleanliness penalty in decay. | |
+| | `app/services/pet_poo.py`: `schedule_next_poo` (hunger × digestion), capped `maybe_generate_poos`. `/pets/{id}/state`, `usePetState`, `<PooSprite>` + `<PetStateLayer>`, `clean` interaction, cleanliness penalty in decay. Junk food → visible poop within ~90s. | |
 | 6 | Polish | 1 d |
 | | Notifications, accessibility, talk/call, mood‑driven behavior weights. | |
 
@@ -1255,51 +2071,56 @@ test('held pet does not get physics-updated', () => {
 ## 15. Implementation checklist
 
 **Schema**
-- [ ] Alembic migration: `pet_stats`, `pet_interaction_log`, `pet_poos`, `food_items`, `user_food_inventory`.
-- [ ] Seed migration: 5 food items.
-- [ ] Backfill: create a `pet_stats` row for every existing `pet_instance` with default values.
+- [ ] Alembic migration: `pet_stats` (incl. `digestion_quality` default 3.0), `pet_interaction_log`, `pet_poos`, `food_items` (incl. `quality` default 3), `user_food_inventory`.
+- [ ] Seed migration: 8 food items across quality tiers 1–5 (§9.2).
+- [ ] Backfill: create a `pet_stats` row for every existing `pet_instance` with default values (incl. `digestion_quality = 3.0`).
 
 **Server core**
-- [ ] `app/services/interactions/registry.py` — Handler dataclass + register/get.
+- [ ] `app/services/interactions/registry.py` — Handler dataclass + `register`/`get`/`all_handlers`.
 - [ ] `app/services/interactions/__init__.py` — imports each handler file so they self‑register.
-- [ ] `app/crud/pet_stats.py` — `get_or_create_stats`, `apply_decay`, `write_stats`, `_snapshot`.
+- [ ] `app/services/pet_poo.py` — `schedule_next_poo` (hunger × digestion factors), `maybe_generate_poos` (capped).
+- [ ] `app/crud/pet_stats.py` — `get_or_create_stats`, `apply_decay`, `write_stats`, `snapshot` (aka `_snapshot`), `compute_mood`.
 - [ ] `app/crud/pet_interaction_log.py` — `last_occurrence`, `log_interaction`.
 - [ ] `app/crud/pet_poos.py` — `list_uncleaned`, `count_uncleaned`, `clean_one`.
-- [ ] `app/crud/food.py` — `get_food`, `consume_one`, `add_food`, `current_quantity`.
-- [ ] `app/routes/pet_interactions.py` — `POST /pets/{id}/interact`, `GET /pets/{id}/state`.
-- [ ] `app/routes/food.py` — list / buy / inventory.
+- [ ] `app/crud/food.py` — `list_food`, `get_food`, `consume_one`, `add_food`, `current_quantity`.
+- [ ] `app/routes/pet_interactions.py` — `POST /pets/{id}/interact`, `GET /pets/{id}/state` (mood + poos + pendingPoo + cooldowns).
+- [ ] `app/routes/food.py` — catalog (with `quality`) / buy (qty 1–99) / inventory; register in `main.py`.
 - [ ] Per‑user 60 req/min rate limit middleware.
 
 **Server interactions**
 - [ ] `pet_handler.py` — `pet` (cooldown 2s).
 - [ ] `play_handler.py` — `play` (cooldown 10s).
-- [ ] `feed_handler.py` — `feed` (cooldown 3s, requires item).
+- [ ] `feed_handler.py` — `feed` (cooldown 3s, requires item): quality → happiness, digestion EMA, junk → early poo, `eating`/`disgust` reaction.
 - [ ] `clean_handler.py` — `clean` (cooldown 500ms, requires pooId).
 - [ ] `call_handler.py` — `call` (cooldown 5s).
 
-**Pooping**
-- [ ] `schedule_next_poo`, `maybe_generate_poos` in `pet_stats` service.
-- [ ] `apply_decay` reads uncleaned poo count for cleanliness penalty.
-- [ ] `/pets/{id}/state` includes `poos: [{id, x, y, createdAt}]` and `pendingPoo: bool`.
+**Pooping + food-quality economy**
+- [ ] `schedule_next_poo` factors `hunger` **and** `digestion_quality` (cheap food → more poop).
+- [ ] `maybe_generate_poos` capped at `MAX_POOS_PER_READ`, advances `next_poo_at` past the cap.
+- [ ] `apply_decay` reads uncleaned poo count for the cleanliness penalty.
+- [ ] Feed handler lowers happiness for quality ≤ 2 and raises it for quality ≥ 4 (§3.5 table).
+- [ ] `/pets/{id}/state` includes `stats`, `mood`, `poos: [{id, x, y, createdAt}]`, `pendingPoo: bool`, `cooldowns`.
 
 **Client framework**
 - [ ] `interactions/registry.ts` — `InteractionDef`, `registerInteraction`, `dispatch`.
 - [ ] `interactions/index.ts` — imports all interactions so they self‑register.
 - [ ] `engine/behaviorRegistry.ts` — add `pushBehavior(pet, id, ms)`.
 - [ ] `engine/physics.ts` — gate on `_heldByUser` and `falling`.
-- [ ] `shared/api.ts` — REST wrapper with credentials + idempotency key generator.
+- [ ] `shared/api.ts` + `shared/toast.ts` (§5.0) — REST wrapper (credentials + idempotency key) and toast stub.
 - [ ] `fx/particles.ts` — basic canvas/DOM particle spawner.
+- [ ] `hooks/usePetState.ts` — polls `/pets/{id}/state` (30s + on focus), `removePooLocal`.
+- [ ] `hooks/useFood.ts` — catalog + inventory + `buy`, decrements on the `pet:fed` event.
 
 **Client interactions + reactions**
-- [ ] `interactions/pet.ts`, `pickup.ts`, `feed.ts`, `clean.ts`, `call.ts`.
-- [ ] Reaction behavior files: `happy_bounce`, `held_wiggle`, `falling`, `landed`, `dizzy`, `eating`, `tail_wag`, `come_here`, `about_to_poo`, `hungry_whine`.
+- [ ] `interactions/pet.ts`, `pickup.ts`, `feed.ts` (emits `pet:fed`), `clean.ts` (uses payload `removeLocal`/`rollback`), `call.ts`.
+- [ ] Reaction behavior files: `happy_bounce`, `held_wiggle`, `falling`, `landed`, `dizzy`, `eating`, `disgust`, `tail_wag`, `come_here`, `about_to_poo`, `hungry_whine`.
 - [ ] Sprite sheets for each reaction added to each species in `fastapi-server/pet_assets/`.
 
 **UI**
 - [ ] `PetSprite` — `pointer-events-auto`, click/pointer/drop handlers wired to dispatcher.
-- [ ] `PooSprite` component + render layer.
-- [ ] `PetVitals` chip with hover‑reveal.
-- [ ] `FoodInventory` panel + food shop modal.
+- [ ] `PooSprite` + `PetStateLayer` (one per active pet) wired into the `Pets` overlay.
+- [ ] `PetVitals` chip with hover‑reveal (takes `mood`).
+- [ ] `FoodShop` component + `FoodInventory` drag‑to‑feed tray (opens shop via modal); mount `FoodInventory` near the overlay.
 - [ ] Toast notifications throttled per stat.
 - [ ] Reduced‑motion guards on bouncy reactions.
 - [ ] Keyboard shortcut + ARIA labels on the active pet.

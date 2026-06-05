@@ -15,6 +15,7 @@ export class PetEngine {
     lastTime = performance.now()
 
     addPet(pet: Pet) {
+        if (this.pets.some(p => p.id === pet.id)) return
         this.pets.push(pet)
     }
 
@@ -31,8 +32,6 @@ export class PetEngine {
 
         this.running = true
 
-        if (this.pets.length < 1) return
-
         const loop = (time: number) => {
             if (!this.running) return
 
@@ -40,7 +39,7 @@ export class PetEngine {
             this.lastTime = time
 
             for (const pet of this.pets) {
-                updateBehavior(pet)
+                updateBehavior(pet, deltaTime)
                 updatePhysics(pet)
                 resolveScreenBounds(pet)
                 updateAnimation(pet, deltaTime)

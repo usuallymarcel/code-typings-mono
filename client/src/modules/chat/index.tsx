@@ -30,6 +30,8 @@ type res = {
     messages: ApiMessage[]
 }
 
+const MESSAGE_LIMIT = 1000
+
 export default function Chat() {
     const [messages, setMessages] = useState<Message[]>([])
     const [input, setInput] = useState('')
@@ -56,7 +58,7 @@ export default function Chat() {
     const pushMessage = (newMessage: Message) => {
             setMessages((prev) => {
             const updated = [...prev, newMessage]
-            return updated.slice(-10)
+            return updated.slice(-MESSAGE_LIMIT)
         })
     }
 
@@ -71,7 +73,7 @@ export default function Chat() {
     }
 
     const fetchMessages = async () => {
-        const res = await fetch(`${serverUrl}/messages?take=10`)
+        const res = await fetch(`${serverUrl}/messages?take=${MESSAGE_LIMIT}`)
         const data = await res.json() as res
 
         const formatted = data.messages.map((m) => ({
@@ -80,7 +82,7 @@ export default function Chat() {
             time: m.created_at,
         }))
 
-        setMessages(formatted.slice(-10))
+        setMessages(formatted.slice(-MESSAGE_LIMIT))
     }
 
     useEffect(() => {

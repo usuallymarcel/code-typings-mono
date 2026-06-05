@@ -4,18 +4,17 @@ function randomFloat(min: number, max: number) {
     return Math.random() * (max - min) + min
 }
 
-export function updateBehavior(pet: Pet) {
+export function updateBehavior(pet: Pet, deltaTime: number) {
     if (pet.behaviorTimer === undefined) {
         chooseBehavior(pet)
     }
 
-    pet.behaviorTimer! -= 1
+    pet.behaviorTimer! -= deltaTime
 
     if (pet.behaviorTimer! <= 0) {
         chooseBehavior(pet)
     }
 
-    console.log(pet.currentBehavior)
     switch (pet.currentBehavior) {
         case 'walk':
             walk(pet)

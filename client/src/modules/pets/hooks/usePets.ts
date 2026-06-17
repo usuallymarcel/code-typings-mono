@@ -1,26 +1,16 @@
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import { usePetEngine } from '../hooks/usePetEngine'
-import type { Pet } from '../models/pet'
+import type { RunTimePet } from '../models/pet'
 
 export function usePets() {
     const engine = usePetEngine()
     const [, setTick] = useState(0)
 
 
-    const addPet = (pet: Pet) => {
-        if (!engine) return
+    const syncPets = useCallback((targets: RunTimePet[]) => {
+        engine.syncPets(targets)
+        setTick(prev => prev + 1)
+    }, [engine])
 
-        engine.addPet(pet)
-        setTick(t => t + 1)
-    }
-
-    const removePet = (id: string) => {
-
-        if (!engine) return
-
-        engine.removePet(id)
-        setTick(t => t + 1)
-    }
-
-    return { addPet, removePet, pets: engine?.pets}
+    return { syncPets, pets: engine.pets}
 }

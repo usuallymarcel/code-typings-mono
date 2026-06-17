@@ -1,46 +1,31 @@
-import { useEffect } from "react";
-import { PetSprite } from "./components/PetSprite";
+import { useEffect, useMemo } from "react";
+import { usePetInventory } from "./hooks/usePetInventory";
 import { usePets } from "./hooks/usePets";
-import type { Pet } from "./models/pet";
-
-const examplePet: Pet = {
-    id: 'cat-1',
-
-    x: 100,
-    y: window.innerHeight - 120,
-
-    vx: 1,
-    vy: 0.2,
-
-    width: 64,
-    height: 64,
-
-    direction: 1,
-
-    currentBehavior: 'idle',
-    behaviors: ['walk', 'idle', 'follow', 'sleep', 'walk', 'walk'],
-
-    speed: 0.2,
-    targetVx: 0,
-    targetVy: 0
-}
+import { usePetSpecies } from "./hooks/usePetSpecies";
+import type { RunTimePet } from "./models/pet";
+import { toRuntimePet } from "./engine/factory";
+import { PetSprite } from "./components/PetSprite";
 
 export function Pets() {
-    const { addPet, pets } = usePets()
+    const { species } = usePetSpecies()
+    const { inventory } = usePetInventory()
+    const { syncPets, pets } = usePets()
+
+    const active = useMemo<RunTimePet[]>(() => 
+        inventory.filter(i => i.active).map(i => {
+            const s = species.find(s => s.speciesId === i.speciesId)
+
+            return s && s.owned ? toRuntimePet(i, s) : null
+        }).filter((p): p is RunTimePet => p !== null)
+    , [species, inventory])
 
     useEffect(() => {
-        addPet(examplePet)
-    }, [])
-
+        syncPets(active)
+    }, [active, syncPets])
 
     return (
         <div className="fixed inset-0 pointer-events-none overflow-hidden z-50">
-            {pets?.map(pet => (
-                <PetSprite
-                    key={pet.id}
-                    pet={pet}
-                />
-            ))}
+            {pets.map(p => <PetSprite key={p.instanceId} pet={p}/>)}
         </div>
     )
 }

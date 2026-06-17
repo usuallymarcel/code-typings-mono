@@ -1,30 +1,33 @@
-import type { Pet } from '../models/pet'
-import { updateBehavior } from './behaviors'
+import { updateBehavior } from './behavior'
 import { updatePhysics } from './physics'
 import {
     resolvePetCollision,
     resolveScreenBounds,
 } from './collisions'
 import { updateAnimation } from './animation'
+import type { RunTimePet } from '../models/pet'
 
 export class PetEngine {
-    pets: Pet[] = []
+    pets: RunTimePet[] = []
 
     running = false
 
     lastTime = performance.now()
 
-    addPet(pet: Pet) {
-        if (this.pets.some(p => p.id === pet.id)) return
-        this.pets.push(pet)
+    syncPets(targets: RunTimePet[]) {
+        const wanted = new Set(targets.map(t => t.instanceId))
+
+        this.pets = this.pets.filter(p => wanted.has(p.instanceId))
+
+        for (const t of targets) {
+            if (!this.pets.some(p => p.instanceId === t.instanceId)) {
+                this.pets.push(t)
+            }
+        }
     }
 
-    setPetElement(pet: Pet, element: HTMLDivElement) {
+    setPetElement(pet: RunTimePet, element: HTMLDivElement) {
         pet.element = element
-    }
-
-    removePet(id: string) {
-        this.pets = this.pets.filter(p => p.id !== id)
     }
 
     start() {

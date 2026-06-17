@@ -1,33 +1,74 @@
-export type BehaviorTypes = "idle" | "walk" | "follow" | "sleep";
+export type Rarity = 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary'
 
-export type PetBehavior = Array<BehaviorTypes>;
-export interface Pet {
-    id: string;
+export type BehaviorId = string
 
-    x: number;
-    y: number;
+export interface PetSpecies {
+    speciesId: string
+    displayName: string
+    rarity: Rarity
+    width: number
+    height: number
+    hitboxInset?: { x: number, y: number }
+    defaultSpeed: number
+    behaviorBag: BehaviorId[]
+    behaviorWeights?: Partial<Record<BehaviorId, number>>
+    animations: Record<BehaviorId, AnimationConfig>
+    spriteSheets: Record<BehaviorId, string>
+    soundCues?: Partial<Record<BehaviorId, string>>
+}
 
-    vx: number;
-    vy: number;
+export interface AnimationConfig {
+    frameWidth: number
+    frameHeight: number
+    frames: number
+    fps: number
+    loop?: boolean
+}
 
-    targetVx: number;
-    targetVy: number;
+export interface PetInstance {
+    instanceId: string
+    speciesId: string
+    nickname?: string
+    unlockedAt: string
+    active: boolean
+}
 
-    width: number;
-    height: number;
+export interface RunTimePet {
+    instanceId: string
+    species: PetSpecies
+    x: number
+    y: number
+    vx: number
+    vy: number
+    targetVx: number
+    targetVy: number
+    direction: 1 | -1
+    currentBehavior: BehaviorId
+    behaviorTimer: number
+    targetX?: number
+    targetY?: number
+    element?: HTMLDivElement
+}
 
-    direction: 1 | -1;
+export interface SpeciesEntry extends PetSpecies {
+    owned: boolean
+    previewUrl?: string //only when owned
+}
 
-    behaviorTimer?: number;
-    currentBehavior: BehaviorTypes;
-    behaviors: PetBehavior;
+export interface LootboxSummary {
+    sku: string
+    name: string
+    price: string
+    odds: Record<Rarity, number>
+}
 
-    speed: number;
-
-    targetX?: number;
-    targetY?: number;
-
-    element?: HTMLDivElement;
-
-    _animationState?: { frame: number; timer: number };
+export interface LootboxOpenResult {
+    ok: true
+    rolled: {
+        rarity: Rarity
+        speciesId: string
+        instanceId: string
+        spriteSheets: Record<BehaviorId, string>
+    }
+    pointsRemaining: string
 }

@@ -505,9 +505,11 @@ Nothing currently mounts a store or an inventory toggle, so there's no way to
    [`usePointsContext`](../client/src/modules/points/contexts/PointsContext.tsx),
    mirrors [`ThemeShop`](../client/src/modules/themes/index.tsx). Full code in
    [pet.md §7.3](./pet.md#73-lootbox-ui).
-2. **`components/LootboxRevealModal.tsx`** — rarity-coloured reveal that animates
-   the won pet from the `spriteSheets` the open response already returned (prefix
-   `serverUrl`). Code in [pet.md §7.3](./pet.md#73-lootbox-ui).
+2. **`components/LootboxRevealModal.tsx`** — a **CS:GO-style spinner** reveal: a
+   reel of decoy pets scrolls past a centre marker and eases to a stop on your
+   actual drop, then flashes the rarity colour. Full implementation in **§6.1**.
+   (This supersedes the simpler single-item reveal sketched in
+   [pet.md §7.3](./pet.md#73-lootbox-ui).)
 3. **`components/PetInventory.tsx`** — list `usePetInventory().inventory`, a
    toggle per pet calling `setActive(instanceId, !active)`. Active pets are the
    ones `index.tsx` materialises onto the screen.
@@ -520,6 +522,154 @@ Mount the store somewhere reachable (e.g. a button near the points/theme UI that
 
 - `useLootboxes.open`: add `credentials: 'include'` (bug #7).
 - `models/pet.ts`: `LootboxSummary` → `{ sku: string; displayName: string; price: number; odds: Record<Rarity, number> }`; `LootboxOpenResult.pointsRemaining: number`. Update the store to read `box.displayName`/`box.price`.
+
+### 6.1 The CS:GO-style spinner reveal
+
+```
+            ▼ marker
+  ┌────┬────┬────┬────┬────┬────┐
+  │duck│gun │cat │ 👻 │mug │rock│   ◀ reel eases left, lands centered → ✦ EPIC ✦
+  └────┴────┴────┴────┴────┴────┘
+           [ Add to party ]  [ Close ]
+```
+
+**Why this is safe:** the roll is already server-authoritative — `/lootboxes/{sku}/open`
+returns the exact `rolled.speciesId` **before** any animation plays
+([pet.md §6](./pet.md#6-lootboxes-serverauthoritative-rolls)). The spinner is
+**pure theatre**: we build a reel of decoy tiles, drop the real winner at a fixed
+index near the end, and animate the strip to land on it. The player can't change
+the outcome by closing early — the pet is already granted.
+
+**Inputs.** Pass the catalog (`usePetSpecies().species`) into the modal so the reel
+has other pets to show as decoys; the **winner** tile uses the signed
+`spriteSheets` from the open result. All image URLs are host-relative → prefix
+`serverUrl` (bug #15). The `LootboxStore.handleOpen` from
+[pet.md §7.3](./pet.md#73-lootbox-ui) becomes:
+
+```tsx
+const result = await open(sku)
+await fetchPoints()
+onOpened?.()
+openModal(<LootboxRevealModal result={result} species={species} />)
+```
+
+**`client/src/modules/pets/components/LootboxRevealModal.tsx`:**
+
+```tsx
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { serverUrl } from '../../../utils/env'
+import { useModal } from '../../../components/modal/ModalContext'
+import { usePetInventory } from '../hooks/usePetInventory'
+import { RARITY_COLOR } from './rarity'
+import type { LootboxOpenResult, SpeciesEntry } from '../models/pet'
+
+const TILE = 96           // px per reel tile (incl. gap)
+const VISIBLE = 5         // tiles visible in the window  → window width = 480px
+const REEL_LEN = 48       // total tiles on the strip
+const WINNER_AT = REEL_LEN - 5   // land near the end so it scrolls a long way
+const SPIN_MS = 5200
+
+// frame-0 thumbnail for a species: its idle sheet if owned, else the silhouette
+function thumb(s?: SpeciesEntry): string | undefined {
+    if (!s) return undefined
+    const sheet = s.spriteSheets?.idle ?? (s.spriteSheets && Object.values(s.spriteSheets)[0])
+    return sheet ? `${serverUrl}${sheet}` : (s.previewUrl ? `${serverUrl}${s.previewUrl}` : undefined)
+}
+
+export function LootboxRevealModal({
+    result, species,
+}: { result: LootboxOpenResult; species: SpeciesEntry[] }) {
+    const { rarity, speciesId, instanceId, spriteSheets } = result.rolled
+    const { closeModal } = useModal()
+    const { setActive, refetch } = usePetInventory()
+    const [done, setDone] = useState(false)
+    const [added, setAdded] = useState(false)
+    const stripRef = useRef<HTMLDivElement>(null)
+
+    const winnerImg = `${serverUrl}${spriteSheets.idle ?? Object.values(spriteSheets)[0]}`
+    const winnerName = species.find(s => s.speciesId === speciesId)?.displayName ?? speciesId
+
+    // Build the reel once: random decoys, real winner pinned at WINNER_AT.
+    const reel = useMemo(() => {
+        const pool = species.length ? species : []
+        const tiles = Array.from({ length: REEL_LEN }, (_, i) => {
+            if (i === WINNER_AT) return { img: winnerImg, rarity, key: i }
+            const s = pool.length ? pool[Math.floor(Math.random() * pool.length)] : undefined
+            return { img: thumb(s), rarity: s?.rarity ?? 'common', key: i }
+        })
+        return tiles
+    }, [species, winnerImg, rarity])
+
+    // Animate: start at 0, then transition to the offset that centres WINNER_AT.
+    useEffect(() => {
+        const el = stripRef.current
+        if (!el) return
+        const jitter = (Math.random() - 0.5) * (TILE * 0.5)   // don't always dead-centre
+        const offset = (WINNER_AT + 0.5) * TILE - (VISIBLE * TILE) / 2 + jitter
+        const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
+        el.style.transform = 'translateX(0px)'
+        el.style.transition = reduce ? 'none' : `transform ${SPIN_MS}ms cubic-bezier(.12,.78,.2,1)`
+        // next frame so the transition actually runs
+        const raf = requestAnimationFrame(() => { el.style.transform = `translateX(-${offset}px)` })
+        const t = setTimeout(() => setDone(true), reduce ? 0 : SPIN_MS)
+        return () => { cancelAnimationFrame(raf); clearTimeout(t) }
+    }, [])
+
+    const addToParty = async () => { await setActive(instanceId, true); await refetch(); setAdded(true) }
+
+    return (
+        <div className="flex flex-col items-center gap-4 p-6 rounded-xl [background:var(--bg)]"
+             style={{ boxShadow: done ? `0 0 48px ${RARITY_COLOR[rarity]}` : undefined, transition: 'box-shadow .3s' }}>
+            {/* reel window with a centre marker */}
+            <div className="relative overflow-hidden border rounded-lg"
+                 style={{ width: VISIBLE * TILE, height: TILE }}>
+                <div className="absolute left-1/2 top-0 bottom-0 z-10 -translate-x-1/2"
+                     style={{ width: 2, background: RARITY_COLOR[rarity] }} />
+                <div ref={stripRef} className="flex h-full" style={{ willChange: 'transform' }}>
+                    {reel.map(t => (
+                        <div key={t.key} className="shrink-0 flex items-center justify-center"
+                             style={{ width: TILE, height: TILE }}>
+                            <div style={{
+                                width: 64, height: 64, imageRendering: 'pixelated',
+                                backgroundImage: t.img ? `url(${t.img})` : undefined,
+                                backgroundPosition: '0 0', backgroundRepeat: 'no-repeat',
+                                opacity: done ? 1 : 0.9,
+                                filter: `drop-shadow(0 0 6px ${RARITY_COLOR[t.rarity as keyof typeof RARITY_COLOR] ?? '#555'})`,
+                            }} />
+                        </div>
+                    ))}
+                </div>
+            </div>
+
+            {done && (
+                <>
+                    <span className="uppercase tracking-widest font-bold" style={{ color: RARITY_COLOR[rarity] }}>{rarity}</span>
+                    <span className="font-semibold">{winnerName}</span>
+                    <div className="flex gap-2">
+                        <button onClick={addToParty} disabled={added}
+                                className="text-black bg-green-600 hover:bg-green-800 rounded-xl px-4 py-1">
+                            {added ? 'Added!' : 'Add to party'}
+                        </button>
+                        <button onClick={closeModal} className="rounded-xl px-4 py-1 border">Close</button>
+                    </div>
+                </>
+            )}
+        </div>
+    )
+}
+```
+
+**Notes / knobs:**
+- The reel shows **frame 0** of each pet (`backgroundPosition: 0 0`) — static thumbnails, so no per-tile animation loop is needed. Want the winner to *animate* after landing? Run the §1.4 frame-stepper on just the winner tile once `done` is true.
+- Decoys reuse the catalog the store already fetched, so the modal makes **no
+  extra network calls**. On a fresh account most decoys are silhouettes (mystery
+  tiles) and the colourful winner pops — which is exactly the CS reveal feel.
+- `WINNER_AT`, `SPIN_MS`, and the `cubic-bezier` are the feel knobs. The ease-out
+  curve front-loads the speed and crawls to a stop. Add a tick sound per tile
+  crossing the marker (reuse [`useSound`](../client/src/modules/sound/useSound.ts)) for full casino brainrot.
+- Honours `prefers-reduced-motion`: skips straight to the result.
+- **No pricing/odds logic here** — purely visual. The economy stays server-side.
 
 ---
 
@@ -1132,7 +1282,7 @@ FOODS = [
 - [ ] (optional) restore pity in `roll()` (#16); CI content guards (§2.4)
 
 **Phase 3 — UI to actually play**
-- [ ] `LootboxStore` + `LootboxRevealModal` + `PetInventory`, mounted
+- [ ] `LootboxStore` + `LootboxRevealModal` (CS-style spinner, §6.1) + `PetInventory`, mounted
 - [ ] `useLootboxes.open` sends `credentials: 'include'` (#7)
 - [ ] `LootboxSummary`/`LootboxOpenResult` types match server (#8)
 

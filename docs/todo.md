@@ -151,6 +151,18 @@ if it didn't there'd be nothing to roll. Phases 0–2 below are the critical pat
     `pet_assets_secret` and `pet_assets_dir`, but [sample.env](../fastapi-server/sample.env)
     documents neither, and `pet_assets/` didn't exist on the server until this PR. → Phase 2.
 
+### Engine (surfaced by the completeness audit)
+
+18. **First-frame `deltaTime` spike — `PetEngine.start()`.** [PetEngine.ts:33-43](../client/src/modules/pets/engine/PetEngine.ts#L33-L43)
+    never resets `this.lastTime` before the first `requestAnimationFrame`. The
+    engine is a **module-level singleton created at import** ([usePetEngine.ts:4](../client/src/modules/pets/hooks/usePetEngine.ts#L4)),
+    so `lastTime` is stamped at page load; by the time `start()` runs and the
+    first frame fires, `deltaTime = now − pageLoad` is **seconds**. That one giant
+    `dt` instantly drains `behaviorTimer` (skips straight to a random behavior) and
+    makes physics lurch. The §3 minimal patch in [pet.md](./pet.md#3-minimal-patch-to-make-the-current-pet-move-on-prod)
+    sets `this.lastTime = performance.now()` right before the rAF — the current
+    code dropped that line. → Phase 1 (§1.7).
+
 ---
 
 ## 3. Phase 0 — make it compile & not crash
@@ -429,6 +441,17 @@ are unused once the server serves `cat/*` — see §8.)
 
 ### 1.7 Engine niceties
 
+- **Reset `lastTime` on start (bug #18).** Stamp the clock right before the first
+  frame so the opening `deltaTime` is ~16ms, not seconds:
+  ```ts
+  start() {
+      if (this.running) return
+      this.running = true
+      this.lastTime = performance.now()   // ← add this; without it the first dt is huge
+      const loop = (time: number) => { /* …unchanged… */ }
+      requestAnimationFrame(loop)
+  }
+  ```
 - `pushBehavior(pet, id, ms)` for interactions ([pet-interaction.md §5.2](./pet-interaction.md#52-client-dispatcher)) — add when you start Phase 4.
 - Debounced `resize` handler so pets re-clamp into the viewport instead of reading `window.inner*` every frame.
 
@@ -510,13 +533,12 @@ Nothing currently mounts a store or an inventory toggle, so there's no way to
    actual drop, then flashes the rarity colour. Full implementation in **§6.1**.
    (This supersedes the simpler single-item reveal sketched in
    [pet.md §7.3](./pet.md#73-lootbox-ui).)
-3. **`components/PetInventory.tsx`** — list `usePetInventory().inventory`, a
-   toggle per pet calling `setActive(instanceId, !active)`. Active pets are the
-   ones `index.tsx` materialises onto the screen.
+3. **`components/PetInventory.tsx`** — lists owned pets with a per-pet toggle that
+   calls `setActive(instanceId, !active)`. Active pets are the ones `index.tsx`
+   materialises onto the screen. **Full code + the mount point in §6.2.**
 
-Mount the store somewhere reachable (e.g. a button near the points/theme UI that
-`openModal(<LootboxStore onOpened={…} />)`). On `onOpened`, refetch
-`usePetSpecies()` + `usePetInventory()` so the new pet flips to `owned/active`.
+How the store/inventory get mounted and reachable is in **§6.2** — without it the
+whole feature has no entry point.
 
 **Also apply in Phase 3:**
 
@@ -671,6 +693,108 @@ export function LootboxRevealModal({
 - Honours `prefers-reduced-motion`: skips straight to the result.
 - **No pricing/odds logic here** — purely visual. The economy stays server-side.
 
+### 6.2 Inventory panel + mounting the UI
+
+The store and reveal are useless if there's no button to open them and no way to
+toggle which pets are on screen. Two small pieces close that loop.
+
+**`client/src/modules/pets/components/PetInventory.tsx`** — owned pets + a
+Summon / On-screen toggle (drives the `active` flag `index.tsx` filters on):
+
+```tsx
+import { usePetInventory } from '../hooks/usePetInventory'
+import { usePetSpecies } from '../hooks/usePetSpecies'
+import { RARITY_COLOR } from './rarity'
+import type { Rarity } from '../models/pet'
+
+export function PetInventory() {
+    const { inventory, setActive, loading } = usePetInventory()
+    const { species } = usePetSpecies()
+    const meta = (id: string) => species.find(s => s.speciesId === id)
+
+    if (loading && inventory.length === 0) return <p className="p-4 opacity-70">Loading…</p>
+    if (inventory.length === 0) return <p className="p-4 opacity-70">No pets yet — open a lootbox!</p>
+
+    return (
+        <div className="flex flex-col gap-2 p-4 [background:var(--bg)] rounded-xl border w-full max-w-md">
+            <h2 className="text-lg font-semibold text-center mb-1">Your pets ({inventory.length})</h2>
+            {inventory.map(p => {
+                const rarity: Rarity = meta(p.speciesId)?.rarity ?? 'common'
+                return (
+                    <div key={p.instanceId} className="flex items-center justify-between border rounded-lg px-3 py-2">
+                        <span className="font-medium" style={{ color: RARITY_COLOR[rarity] }}>
+                            {p.nickname ?? meta(p.speciesId)?.displayName ?? p.speciesId}
+                        </span>
+                        <button
+                            onClick={() => setActive(p.instanceId, !p.active)}
+                            className={`rounded-lg px-3 py-1 text-sm text-black ${
+                                p.active ? 'bg-green-600 hover:bg-green-800' : 'bg-gray-400 hover:bg-gray-500'
+                            }`}
+                        >
+                            {p.active ? 'On screen' : 'Summon'}
+                        </button>
+                    </div>
+                )
+            })}
+        </div>
+    )
+}
+```
+
+**`client/src/modules/pets/components/PetsMenu.tsx`** — a floating launcher that
+opens the store + inventory in the existing modal system. **This is the entry
+point the rest of Phase 3 was missing** — without it nothing is reachable:
+
+```tsx
+import { useModal } from '../../../components/modal/ModalContext'
+import { LootboxStore } from './LootboxStore'
+import { PetInventory } from './PetInventory'
+import { usePetSpecies } from '../hooks/usePetSpecies'
+import { usePetInventory } from '../hooks/usePetInventory'
+
+export function PetsMenu() {
+    const { openModal } = useModal()
+    const { refetch: refetchSpecies } = usePetSpecies()
+    const { refetch: refetchInventory } = usePetInventory()
+
+    const open = () => openModal(
+        <div className="flex flex-col gap-4 items-center max-h-[80vh] overflow-auto">
+            <LootboxStore onOpened={() => { refetchSpecies(); refetchInventory() }} />
+            <PetInventory />
+        </div>,
+    )
+
+    return (
+        <button
+            onClick={open}
+            className="fixed bottom-4 right-4 z-[60] pointer-events-auto rounded-full px-4 py-2
+                       border bg-green-600 hover:bg-green-800 text-black font-semibold"
+        >
+            🐾 Pets
+        </button>
+    )
+}
+```
+
+Mount it once, next to the overlay, in [App.tsx](../client/src/App.tsx):
+
+```tsx
+<div className="relative overflow-hidden min-h-screen">
+    <Pets />
+    <PetsMenu />        {/* ← the launcher */}
+    {/* …Typing… */}
+</div>
+```
+
+> **Shared-state caveat.** `usePetSpecies`/`usePetInventory` each hold their own
+> `useState` per call site, so `PetsMenu`'s `refetch` updates *its* copy, not the
+> `PetInventory` rendered inside the modal (a separate instance). For the store,
+> inventory, and on-screen pets to share one source of truth, lift these two hooks
+> into a context provider exactly like
+> [`PointsContext`](../client/src/modules/points/contexts/PointsContext.tsx) wraps
+> `usePoints`. Until then `PetInventory` self-refreshes via its own
+> `usePetInventory` + optimistic `setActive`, which is enough for a first cut.
+
 ---
 
 ## 7. Phase 4 — the interaction layer (feed / pet / poop)
@@ -690,6 +814,49 @@ for it is in **§11.3**; the code is in pet-interaction.md. High-level punch-lis
   and the reaction behaviors (`happy_bounce`, `eating`, `disgust`, `tail_wag`,
   `held_wiggle`, `falling`, `landed`, `come_here`, `about_to_poo`).
 - Reuse the seed migration pattern in §11 for `food_items`.
+
+**Coverage check (completeness audit).** pet-interaction.md actually ships full
+code for almost all of this — don't re-derive it: the dispatcher/registry (§5),
+`pushBehavior` (§5.2), every handler (§6), the `/interact` + `/pets/{id}/state`
+routes and stats CRUD (§5.5, §7.6), the poo service (§7.1–7.2), and the client UI
+under its own names — `usePetState`, `<PooSprite>`, `<PetStateLayer>`, the food
+shop, and **`PetVitals`** (that's the "vitals HUD"; there is no `VitalsHUD`). The
+**one helper it references but never codes** is `spawnParticles` (used by
+`pet`/`feed`/`clean`); it's only a checklist bullet. Minimal dependency-free stub
+so those interactions don't import a missing module:
+
+```ts
+// client/src/modules/pets/fx/particles.ts
+const GLYPH: Record<string, string> = {
+    hearts: '❤️', sparkles: '✨', food_crumbs: '🍪', confetti: '🎉',
+}
+export function spawnParticles(
+    { kind, x, y, count = 6 }: { kind: string; x: number; y: number; count?: number },
+) {
+    const glyph = GLYPH[kind] ?? '✨'
+    for (let i = 0; i < count; i++) {
+        const el = document.createElement('div')
+        el.textContent = glyph
+        el.style.cssText =
+            `position:fixed;left:${x}px;top:${y}px;pointer-events:none;z-index:60;` +
+            `font-size:14px;will-change:transform,opacity;transition:transform .8s ease-out,opacity .8s`
+        document.body.appendChild(el)
+        requestAnimationFrame(() => {
+            el.style.transform = `translate(${(Math.random() - 0.5) * 60}px, ${-30 - Math.random() * 40}px)`
+            el.style.opacity = '0'
+        })
+        setTimeout(() => el.remove(), 850)
+    }
+}
+```
+
+> The 9 reaction behaviors (`happy_bounce`, `eating`, `disgust`, `tail_wag`,
+> `held_wiggle`, `falling`, `landed`, `come_here`, `about_to_poo`) are plain
+> behavior plugins (§10 pattern) — but each needs an `animations` entry + a sprite
+> per species, or the engine silently falls back to `idle`. Either author those
+> sheets (extend the forge in §9) or accept the `idle` fallback for species that
+> lack them. This is content work, not code, and is the main "still to do" for a
+> polished Phase 4.
 
 ---
 
@@ -1271,6 +1438,7 @@ FOODS = [
 - [ ] `_animationState`/`_lockedBehavior`/`_heldByUser` on `RunTimePet` (§1.1)
 - [ ] `engine/behaviors/*` + `index.ts`, imported by `PetEngine.ts` (#5, §10)
 - [ ] behavior-timer formula fixed (#6)
+- [ ] `PetEngine.start()` resets `lastTime` before first rAF (#18, §1.7)
 - [ ] `animation.ts` species-driven + `serverUrl` prefix (#1, §1.4)
 - [ ] `physics.ts` / `collisions.ts` use `pet.species.*` (#2, #3)
 - [ ] `PetSprite.tsx` uses `RunTimePet` + `species.width/height` (#4)
@@ -1282,7 +1450,8 @@ FOODS = [
 - [ ] (optional) restore pity in `roll()` (#16); CI content guards (§2.4)
 
 **Phase 3 — UI to actually play**
-- [ ] `LootboxStore` + `LootboxRevealModal` (CS-style spinner, §6.1) + `PetInventory`, mounted
+- [ ] `LootboxStore` + `LootboxRevealModal` (CS-style spinner, §6.1) + `PetInventory` (§6.2)
+- [ ] `PetsMenu` launcher mounted in `App.tsx` — the entry point (§6.2)
 - [ ] `useLootboxes.open` sends `credentials: 'include'` (#7)
 - [ ] `LootboxSummary`/`LootboxOpenResult` types match server (#8)
 

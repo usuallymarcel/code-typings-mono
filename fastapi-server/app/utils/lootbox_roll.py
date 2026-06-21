@@ -8,7 +8,7 @@ RARITY_ORDER = ["common", "uncommon", "rare", "epic", "legendary"]
 
 def roll(db: Session, user_id: int, box: Lootbox) -> tuple[str, str, str]:
     seed = secrets.token_bytes(32)
-    seed_hash = hashlib.sha256(seed).digest()
+    seed_hash = hashlib.sha256(seed).hexdigest()
 
     rarities = box.drop_table["rarities"]
 

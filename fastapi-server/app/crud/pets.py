@@ -9,7 +9,7 @@ def create_instance(db: Session, user_id: int, species_id: str, source: str) -> 
                             species_id=species_id,
                             source=source)
     db.add(instance)
-    db.commit()
+    db.flush()
     db.refresh(instance)
 
     return instance

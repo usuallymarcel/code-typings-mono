@@ -14,7 +14,7 @@ def species(request: Request, db = Depends(get_db)):
     session = get_session_from_request(db, request)
 
     owned_species = list_user_instances(db, session.user_id)
-    owned_species_ids = {i.id for i in owned_species} 
+    owned_species_ids = {i.species_id for i in owned_species} 
 
     out = []
 

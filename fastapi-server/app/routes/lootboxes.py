@@ -41,30 +41,32 @@ def open_box(sku: str, request: Request, db = Depends(get_db)):
         raise HTTPException(404, 'Lootbox not found')
     
     try:
-        with db.begin_nested():
-            pts = get_points_by_user_id(db, session.user_id)
+        pts = get_points_by_user_id(db, session.user_id)
 
-            if pts.points < box.price:
-                raise HTTPException(400, "not enough points")
-            
-            update_user_points(db, session.user_id, pts.points - box.price)
+        if pts.points < box.price:
+            raise HTTPException(400, "not enough points")
+        
+        remaining = pts.points - box.price
+        update_user_points(db, session.user_id, remaining)
 
-            rarity, species_id, seed_hash = roll(db, session.user_id, box)
+        rarity, species_id, seed_hash = roll(db, session.user_id, box)
 
-            instance = create_instance(db, session.user_id, species_id, source=f"lootbox:{sku}")
+        instance = create_instance(db, session.user_id, species_id, source=f"lootbox:{sku}")
 
-            db.add(LootboxOpen(
-                user_id=session.user_id,
-                sku=sku,
-                rolled_rarity=rarity,
-                rolled_species=species_id,
-                pet_instance_id=instance.id,
-                cost=box.price,
-                server_seed_hash=seed_hash
-            ))
-            db.commit()
-    except IntegrityError:
-        db.rollback()
+        db.add(LootboxOpen(
+            user_id=session.user_id,
+            sku=sku,
+            rolled_rarity=rarity,
+            rolled_species=species_id,
+            pet_instance_id=instance.id,
+            cost=box.price,
+        ))
+        db.commit()
+        db.refresh(instance)
+    except HTTPException:
+        db.rollback(); raise
+    except Exception:
+        db.rollback
         raise HTTPException(500, 'Could not open lootbox')
     
     return {
@@ -72,9 +74,9 @@ def open_box(sku: str, request: Request, db = Depends(get_db)):
         "rolled": {
             "rarity": rarity,
             "speciesId": species_id,
-            "instanceId": instance.id,
+            "instanceId": instance.instance_id,
             "spriteSheets": sign_sprite_urls_for_species(db, session.user_id, species_id),
         },
-        "pointsRemaining": pts.points - box.price
+        "pointsRemaining": remaining
     }
     

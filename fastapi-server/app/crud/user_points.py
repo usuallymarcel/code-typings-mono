@@ -16,7 +16,7 @@ def get_points_by_user_id(db: Session, user_id: str):
 def update_user_points(db: Session, user_id: str, points: int):
     db.query(User_Point).filter(User_Point.user_id == user_id).update({User_Point.points: points})
 
-    db.commit()
+    db.flush()
 
 def create_points(db: Session, user_id: str, points: int = 0):
     

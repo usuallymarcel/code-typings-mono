@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useModal } from '../../../components/modal/ModalContext'
-import { usePetInventory } from '../hooks/usePetInventory'
 import { RARITY_COLOR } from './rarity'
 import type { LootboxOpenResult, SpeciesEntry } from '../models/pet'
 import { serverUrl } from '../../../utils/env'

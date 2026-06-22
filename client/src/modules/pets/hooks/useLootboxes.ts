@@ -30,6 +30,7 @@ export function useLootboxes() {
         try {
             const res = await fetch(`${serverUrl}/lootboxes/${sku}/open`, {
                 method: 'POST',
+                credentials: 'include',
                 headers: {
                     'Content-Type': 'application/json',
                     'Idempotency-Key': crypto.randomUUID()

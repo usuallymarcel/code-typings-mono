@@ -34,17 +34,24 @@ export function LootboxRevealModal({
     }), [species, winnerImg, rarity])
 
     // Animate: start at 0, then transition to the offset that centres WINNER_AT.
+    // Always plays — this is a user-initiated reward reveal, so we intentionally
+    // ignore prefers-reduced-motion here.
     useEffect(() => {
         const el = stripRef.current
         if (!el) return
         const jitter = (Math.random() - 0.5) * (TILE * 0.5)   // don't always dead-centre
         const offset = (WINNER_AT + 0.5) * TILE - (VISIBLE * TILE) / 2 + jitter
-        const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
+        // Pin the start frame with no transition, then arm the spin on the next
+        // frame. The double-rAF guarantees the browser commits translateX(0)
+        // before the transition is armed, so it always animates (not snaps).
+        el.style.transition = 'none'
         el.style.transform = 'translateX(0px)'
-        el.style.transition = reduce ? 'none' : `transform ${SPIN_MS}ms cubic-bezier(.12,.78,.2,1)`
-        const raf = requestAnimationFrame(() => { el.style.transform = `translateX(-${offset}px)` })
-        const t = setTimeout(() => setDone(true), reduce ? 0 : SPIN_MS)
+        const raf = requestAnimationFrame(() => requestAnimationFrame(() => {
+            el.style.transition = `transform ${SPIN_MS}ms cubic-bezier(.12,.78,.2,1)`
+            el.style.transform = `translateX(-${offset}px)`
+        }))
+        const t = setTimeout(() => setDone(true), SPIN_MS)
         return () => { cancelAnimationFrame(raf); clearTimeout(t) }
     }, [])
 

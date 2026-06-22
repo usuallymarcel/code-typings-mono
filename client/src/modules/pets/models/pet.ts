@@ -48,11 +48,15 @@ export interface RunTimePet {
     targetX?: number
     targetY?: number
     element?: HTMLDivElement
+
+    _animationState?: { frame: number; timer: number; behavior: string; lastUrl?: string}
+    _lockedBehavior?: boolean
+    _heldByUser?: boolean
 }
 
 export interface SpeciesEntry extends PetSpecies {
     owned: boolean
-    previewUrl?: string //only when owned
+    previewUrl?: string
 }
 
 export interface LootboxSummary {

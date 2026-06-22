@@ -15,6 +15,13 @@ router = APIRouter(prefix="/pet-assets", tags=["pet-assets"])
 
 ASSETS_DIR = os.path.abspath(env.pet_assets_dir)
 
+@router.get("/_silhouettes/{species_id}.png")
+def serve_silhouettes(species_id: str):
+    abs_path = os.path.abspath(os.path.join(ASSETS_DIR, "_silhouettes", f"{species_id}.png"))
+    if not abs_path.startswith(ASSETS_DIR + os.sep) or not os.path.isfile(abs_path):
+        raise HTTPException(404)
+    return FileResponse(abs_path, media_type='image/png', headers={"Cache-Control": "public, max-age=86400"})
+
 @router.get("/{species_id}/{behavior}.png")
 def serve_sprite(species_id: str, behavior: str, request: Request, db = Depends(get_db)):
     session = get_session_from_request(db, request)

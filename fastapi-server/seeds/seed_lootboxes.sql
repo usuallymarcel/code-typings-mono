@@ -28,6 +28,12 @@ ON CONFLICT (sku) DO NOTHING;
 
 COMMIT;
 
+BEGIN;
+INSERT INTO lootboxes (sku, name, price, drop_table, enabled)
+VALUES ('ai_slop', 'AI_Slop', 50000, '{"rarities":{"common":74,"uncommon":15,"rare":7, "epic":3, "legendary":1},"speciesByRarity":{"common":["cat","stick_figure","semicolon","pet_rock"],"uncommon":["rubber_duck","coffee_mug"],"rare":["desk_gun", "ghost_404"],"epic":["bonk_hammer", "disco_ball"],"legendary":["loot_goblin"]}}'::json, true),
+ON CONFLICT (sku) DO NOTHING;
+
+COMMIT;
 -- ----------------------------------------------------------------------------
 -- Rollback (uncomment to remove exactly these lootboxes):
 -- BEGIN;

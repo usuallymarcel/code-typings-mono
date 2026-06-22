@@ -1,28 +1,26 @@
-import type { Pet } from '../models/pet'
-import { petAssets } from '../assets/cat/metadata'
+import type { RunTimePet } from '../models/pet'
 import { useEffect, useRef } from 'react'
 import { usePetEngine } from '../hooks/usePetEngine'
 
-export function PetSprite({ pet }: { pet: Pet }) {
+export function PetSprite({ pet }: { pet: RunTimePet }) {
     const ref = useRef<HTMLDivElement>(null)
     const engine = usePetEngine()
 
 
     useEffect(() => {
-        if (ref.current && engine) {
-            engine?.setPetElement(pet, ref.current)
+        if (ref.current) {
+            engine.setPetElement(pet, ref.current)
         }
     }, [pet, engine])
 
     return (
         <div
             ref={ref}
-            className="absolute select-none"
+            className="absolute select-none pointer-events-auto"
             style={{
-                width: pet.width,
-                height: pet.height,
+                width: pet.species.width,
+                height: pet.species.height,
                 imageRendering: 'pixelated',
-                backgroundImage: `url(${petAssets[pet.currentBehavior]})`,
                 backgroundRepeat: 'no-repeat',
                 willChange: 'transform',
             }}

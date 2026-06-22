@@ -20,6 +20,10 @@ import Gamble from '../points'
 import { usePointsContext } from '../points/contexts/PointsContext'
 import { ThemeShop } from '../themes'
 import Chat from '../chat'
+import { LootboxStore } from '../pets/components/LootboxStore'
+import { PetInventory } from '../pets/components/PetInventory'
+import { usePetSpecies } from '../pets/hooks/usePetSpecies'
+import { usePetInventory } from '../pets/hooks/usePetInventory'
 
 const sizeClasses = [
     "text-xl",
@@ -58,6 +62,8 @@ export default function Typing() {
     const { user, loading, logout } = useUser()
     const { sendLeaderboardEntry } = useLeaderboardEntry()
     const { fetchPoints, points, updatePoints } = usePointsContext()
+    const { refetch: refetchSpecies } = usePetSpecies()
+    const { refetch: refetchInventory } = usePetInventory()
 
     // const typeSpaceSound = useRef(new Audio("/sounds/spacebar.wav"))
 
@@ -378,6 +384,15 @@ const displayTypeText = () => {
                 {user && <OutlineButton onClick={() => openModal(<Gamble />)}>Gamble</OutlineButton>}
                 {user && <OutlineButton onClick={() => openModal(<ThemeShop />)}>Themes</OutlineButton>}
                 {<OutlineButton onClick={() => openModal(<Chat />)}>Chat</OutlineButton>}
+
+
+                
+                {user && <OutlineButton onClick={() => openModal(
+                        <div className="flex flex-col gap-4 items-center max-h-[80vh] overflow-auto">
+                            <LootboxStore onOpened={() => { refetchSpecies(); refetchInventory() }} />
+                            <PetInventory />
+                        </div>
+                    )}>PETS!!!</ OutlineButton>}
                 </div>
             </div>
 

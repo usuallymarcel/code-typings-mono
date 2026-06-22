@@ -33,13 +33,11 @@ def species(request: Request, db = Depends(get_db)):
             "owned": owned
         }
 
+        entry["previewUrl"] = f"/pet-assets/_silhouettes/{s.species_id}.png"
         if owned:
             entry["spriteSheets"] = {
                 beh: sign_sprite_url(session.user_id, s.species_id, beh) for beh in s.config["animations"].keys()
             }
-        else:
-            entry["previewUrl"] = f"/pets/assets/_silhouettes/{s.species_id}.png"
-
         out.append(entry)
     
     return {"ok": True, "species": out}

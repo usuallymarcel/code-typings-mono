@@ -200,7 +200,6 @@ export default function Typing() {
             if (user) {
                 await sendLeaderboardEntry(score, category)
                 await updatePoints(score, category)
-                await fetchPoints()
             }
             // setScore(Math.round(stats.wpm * stats.accuracy * maxCombo.current))
             setScore(score)

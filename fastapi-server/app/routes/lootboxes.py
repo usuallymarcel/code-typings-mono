@@ -66,7 +66,7 @@ def open_box(sku: str, request: Request, db = Depends(get_db)):
     except HTTPException:
         db.rollback(); raise
     except Exception:
-        db.rollback
+        db.rollback()
         raise HTTPException(500, 'Could not open lootbox')
     
     return {

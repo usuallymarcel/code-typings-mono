@@ -34,6 +34,7 @@ punch-list to actually ship it.**
 10. [Behaviors — full plugin library (code)](#10-behaviors--full-plugin-library-code)
 11. [Database migrations — full code](#11-database-migrations--full-code)
 12. [Definition of done / checklist](#12-definition-of-done--checklist)
+13. [Duplicate API requests — points commit + species/inventory fan-out](#13-duplicate-api-requests--points-commit--speciesinventory-fan-out)
 
 ---
 
@@ -1463,3 +1464,162 @@ FOODS = [
 **Smoke test (Phases 0–3):** log in → open `starter_crate` → reveal modal shows a
 pet animating → it appears in inventory → toggle active → it struts across the
 screen using its species sprites → refresh: still owned, still active.
+
+---
+
+## 13. Duplicate API requests — points commit + species/inventory fan-out
+
+Reported 2026-06-23: `POST /api/v2/points` returns `null` and the score is never
+added; `GET /points` and `GET /pets/species` fire multiple times per page. Two
+separate root causes — backend persistence bugs (points changes flushed but never
+committed), and client-side request fan-out from hooks that fetch without a shared
+context. **All the points issues — 13.1, 13.4, 13.5 — are now fixed. The
+species/inventory fan-out (13.2–13.3) is left staged: those are pet-data requests,
+not points.**
+
+### 13.1 `POST /points` never persisted — ✅ FIXED in this change
+
+- **Symptom:** `POST /api/v2/points` (e.g. `{"score":102,"category":"10",...}`)
+  responds `null` and `user_points.points` is unchanged.
+- **Cause:** [routes/points.py](../fastapi-server/app/routes/points.py) `update_points`
+  called `update_user_points()` — which only `db.flush()`es, never commits
+  ([crud/user_points.py:16-19](../fastapi-server/app/crud/user_points.py#L16-L19)) —
+  and then returned with **no `db.commit()`**. `get_db` only `db.close()`s on
+  teardown ([database.py:22-27](../fastapi-server/app/database.py#L22-L27)), and
+  `close()` rolls back the open transaction → the flushed `UPDATE` is discarded.
+  `check_session_token` *does* commit, but **before** the points update
+  ([session_tokens.py:20-21](../fastapi-server/app/utils/session_tokens.py#L20-L21)),
+  so it only persists the token delete, not the score. The empty `null` body is
+  the same missing-return (the client ignores it and re-`GET`s anyway).
+- **Why themes / blackjack-start looked fine:** they call a CRUD that commits
+  immediately after the points update — `create_theme_by_user_id`
+  ([user_themes.py:31](../fastapi-server/app/crud/user_themes.py#L31)),
+  `create_game` ([blackjack.py:8](../fastapi-server/app/crud/blackjack.py#L8)) —
+  which flushes the pending points `UPDATE` into a committed transaction. Lootbox
+  open commits explicitly ([lootboxes.py:64](../fastapi-server/app/routes/lootboxes.py#L64)).
+  The points route was the one mutator with no follow-up commit.
+- **Fix applied** — commit in the route and return a real body:
+  ```python
+  # routes/points.py — update_points(), after computing newPoints
+  newPoints: int = points.points + data.score * multiplier
+  update_user_points(db, session.user_id, newPoints)
+  db.commit()
+
+  return {'ok': True, 'points': newPoints}
+  ```
+- **Convention note (don't "fix" it centrally):** `update_user_points` is
+  flush-only **by design** — the caller owns the commit so multi-step routes stay
+  atomic. Do **not** make it commit internally: lootbox open stages the debit and
+  commits everything (debit + pet grant + audit row) together at the end; an
+  internal commit would let a mid-roll failure debit points without granting a pet.
+  (That rollback is already broken for a different reason — see 13.5.)
+
+### 13.2 `GET /pets/species` fires N times — hook has no shared context
+
+`usePetSpecies` ([hooks/usePetSpecies.ts](../client/src/modules/pets/hooks/usePetSpecies.ts))
+fetches in its own `useEffect` **and** registers a `window 'focus'` refetch
+([lines 37-41](../client/src/modules/pets/hooks/usePetSpecies.ts#L37-L41)), with
+no shared cache. It is called independently in **four** components:
+
+- [pets/index.tsx:10](../client/src/modules/pets/index.tsx#L10) — `Pets` (always mounted)
+- [typing/index.tsx:65](../client/src/modules/typing/index.tsx#L65) — `Typing` (always mounted)
+- [PetInventory.tsx:8](../client/src/modules/pets/components/PetInventory.tsx#L8) — PETS modal
+- [LootboxStore.tsx:11](../client/src/modules/pets/components/LootboxStore.tsx#L11) — PETS modal
+
+→ ≥2 `GET /pets/species` on first paint, plus one **per live consumer** on every
+window focus.
+
+**Fix:** give it a single shared instance via context, exactly like
+[PointsContext](../client/src/modules/points/contexts/PointsContext.tsx) and
+[PetInventoryContext](../client/src/modules/pets/contexts/PetInventoryContext.tsx).
+
+```tsx
+// client/src/modules/pets/contexts/PetSpeciesContext.tsx   (NEW)
+import { createContext, useContext, type ReactNode } from "react"
+import { usePetSpecies } from "../hooks/usePetSpecies"
+
+const PetSpeciesContext = createContext<ReturnType<typeof usePetSpecies> | null>(null)
+
+export function PetSpeciesProvider({ children }: { children: ReactNode }) {
+    const species = usePetSpecies()
+    return <PetSpeciesContext.Provider value={species}>{children}</PetSpeciesContext.Provider>
+}
+
+export function usePetSpeciesContext() {
+    const ctx = useContext(PetSpeciesContext)
+    if (!ctx) throw new Error("usePetSpeciesContext must be used within a PetSpeciesProvider")
+    return ctx
+}
+```
+
+```tsx
+// App.tsx — mount the provider once (inside PetInventoryProvider)
+<PetInventoryProvider>
+    <PetSpeciesProvider>
+        <ModalProvider>
+            …
+        </ModalProvider>
+    </PetSpeciesProvider>
+</PetInventoryProvider>
+```
+
+Then replace **all four** `usePetSpecies()` call sites with
+`usePetSpeciesContext()` (drop the direct `usePetSpecies` import in each). The
+`onOpened={() => { refetchSpecies(); refetchInventory() }}` in
+[typing/index.tsx:392](../client/src/modules/typing/index.tsx#L392) now refetches
+the single shared instance — which is the point.
+
+### 13.3 Inventory `GET` fires twice — raw hook bypasses its context
+
+Inventory is already shared via `PetInventoryProvider`
+([App.tsx:19](../client/src/App.tsx#L19)), but
+[typing/index.tsx:66](../client/src/modules/typing/index.tsx#L66) calls the **raw**
+`usePetInventory()` instead of `usePetInventoryContext()`, spinning up a second
+instance + a second fetch.
+
+**Fix:** in `typing/index.tsx`, use `usePetInventoryContext()` (from
+`../pets/contexts/PetInventoryContext`) and delete the direct `usePetInventory`
+import at [line 26](../client/src/modules/typing/index.tsx#L26).
+
+### 13.4 `GET /points` fires twice on test completion — redundant refetch — ✅ FIXED
+
+In `handleChange` on completion ([typing/index.tsx](../client/src/modules/typing/index.tsx)):
+
+```js
+await updatePoints(score, category)   // already ends with `await fetchPoints()` (usePoints.tsx:81)
+await fetchPoints()                   // ← redundant 2nd GET /points  (removed)
+```
+
+**Fixed:** dropped the trailing `await fetchPoints()`; `updatePoints` already
+refreshes after the POST. *(Dev-only: React StrictMode double-invokes mount
+effects, doubling first-load GETs in dev — not a prod issue, ignored.)*
+
+### 13.5 Related backend commit bugs (same family) — ✅ FIXED
+
+Same "caller forgot to commit / rollback" footgun as 13.1:
+
+- **Blackjack points never persisted (worse than first thought).** *Both* points
+  mutations were flush-only with no follow-up commit, so every blackjack points
+  change rolled back on `db.close()`:
+  - `start_game` debits the bet at [blackjack.py:52](../fastapi-server/app/routes/blackjack.py#L52),
+    but the only commit before it is `create_game`'s — which runs **before** the
+    debit ([blackjack.py:48](../fastapi-server/app/routes/blackjack.py#L48)).
+  - `hit`/`stand` pays out the win/push at [blackjack.py:113](../fastapi-server/app/routes/blackjack.py#L113),
+    after the hand-state commit at [blackjack.py:101](../fastapi-server/app/routes/blackjack.py#L101).
+
+  Net effect: bet never left the balance and winnings never landed — a win, loss,
+  and push all resolved back to the starting balance. **Fixed** with a `db.commit()`
+  after each `update_user_points`. Both are required: if only the payout committed,
+  it would read the un-debited balance and overpay by the bet.
+- **Lootbox rollback was a no-op.** [lootboxes.py:69](../fastapi-server/app/routes/lootboxes.py#L69)
+  was `db.rollback` — an attribute reference missing the `()`, so the
+  `except Exception` branch never actually rolled back a failed open (only
+  `get_db`'s `close()` was saving it). **Fixed:** `db.rollback()`.
+
+### 13.6 Checklist
+
+- [x] `routes/points.py` commits + returns body (13.1)
+- [ ] `PetSpeciesContext` created, mounted in `App.tsx`, all 4 call sites swapped (13.2)
+- [ ] `typing/index.tsx` uses `usePetInventoryContext()`, raw import removed (13.3)
+- [x] redundant `fetchPoints()` removed from `handleChange` (13.4)
+- [x] blackjack bet-debit + payout commits; lootbox `db.rollback()` parens (13.5)

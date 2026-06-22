@@ -50,6 +50,7 @@ def start_game(request: Request, data: StartGameRequest, db = Depends(get_db)):
     new_points = user_points.points - game.bet_amount
 
     update_user_points(db, session.user_id, new_points)
+    db.commit()
 
     return {'ok': True, 'game': game.to_response(), 'points': new_points}
 
@@ -111,6 +112,7 @@ def hit(request: Request, data: GameAction, db = Depends(get_db)):
             new_points = user_points.points
 
         update_user_points(db, session.user_id, new_points)
+        db.commit()
 
     return {'ok': True, 'game': engine.to_response()}
             

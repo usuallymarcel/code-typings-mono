@@ -61,7 +61,7 @@ export default function Typing() {
 
     const { user, loading, logout } = useUser()
     const { sendLeaderboardEntry } = useLeaderboardEntry()
-    const { fetchPoints, points, updatePoints } = usePointsContext()
+    const { points, updatePoints } = usePointsContext()
     const { refetch: refetchSpecies } = usePetSpecies()
     const { refetch: refetchInventory } = usePetInventory()
 

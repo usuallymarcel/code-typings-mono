@@ -1,10 +1,6 @@
 import type { PetSpecies, RunTimePet } from "../../models/pet"
 import { getBehavior } from "./behaviorRegistry"
 
-// function randomFloat(min: number, max: number) {
-//     return Math.random() * (max - min) + min
-// }
-
 export function updateBehavior(pet: RunTimePet, deltaTime: number) {
     pet.behaviorTimer -= deltaTime
 
@@ -15,7 +11,12 @@ export function updateBehavior(pet: RunTimePet, deltaTime: number) {
         pet.currentBehavior = pickWeighted(pet.species)
         const next = getBehavior(pet.currentBehavior)
         next?.enter?.(pet)
-        pet.behaviorTimer = (next?.maxDurationMs ?? 4000) + Math.random() * ((next?.maxDurationMs ?? 7000) - (next?.minDurationMs ?? 4000))
+        
+        const min = next?.minDurationMs ?? 4000
+        const max = next?.maxDurationMs ?? 7000
+
+        pet.behaviorTimer = min + Math.random() * (max-min)
+
 
     }
     getBehavior(pet.currentBehavior)?.update(pet, deltaTime)

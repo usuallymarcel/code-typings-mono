@@ -1,4 +1,4 @@
-import type { Pet } from '../models/pet'
+import type { RunTimePet } from '../models/pet'
 
 export type CollisionBox = {
     x: number
@@ -16,20 +16,20 @@ export function isColliding(a: CollisionBox, b: CollisionBox) {
     )
 }
 
-export function resolvePetCollision(a: Pet, b: Pet) {
+export function resolvePetCollision(a: RunTimePet, b: RunTimePet) {
     if (
         !isColliding(
             {
                 x: a.x,
                 y: a.y,
-                width: a.width,
-                height: a.height,
+                width: a.species.width,
+                height: a.species.height,
             },
             {
                 x: b.x,
                 y: b.y,
-                width: b.width,
-                height: b.height,
+                width: b.species.width,
+                height: b.species.height,
             }
         )
     ) {
@@ -38,7 +38,7 @@ export function resolvePetCollision(a: Pet, b: Pet) {
 
     // Push pets apart
     const overlapX =
-        Math.min(a.x + a.width, b.x + b.width) -
+        Math.min(a.x + a.species.width, b.x + b.species.width) -
         Math.max(a.x, b.x)
 
     if (a.x < b.x) {
@@ -57,14 +57,14 @@ export function resolvePetCollision(a: Pet, b: Pet) {
     b.direction = b.vx >= 0 ? 1 : -1
 }
 
-export function resolveScreenBounds(pet: Pet) {
+export function resolveScreenBounds(pet: RunTimePet) {
     if (pet.x < 0) {
         pet.x = 0
         pet.vx *= -1
     }
 
-    if (pet.x + pet.width > window.innerWidth) {
-        pet.x = window.innerWidth - pet.width
+    if (pet.x + pet.species.width > window.innerWidth) {
+        pet.x = window.innerWidth - pet.species.width
         pet.vx *= -1
     }
 
@@ -73,8 +73,8 @@ export function resolveScreenBounds(pet: Pet) {
         pet.vy *= -1
     }
 
-    if (pet.y + pet.height > window.innerHeight) {
-        pet.y = window.innerHeight - pet.height
+    if (pet.y + pet.species.height > window.innerHeight) {
+        pet.y = window.innerHeight - pet.species.height
         pet.vy *= -1
     }
 }

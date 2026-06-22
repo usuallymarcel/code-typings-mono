@@ -34,6 +34,8 @@ export class PetEngine {
         if (this.running) return
 
         this.running = true
+        
+        this.lastTime = performance.now()
 
         const loop = (time: number) => {
             if (!this.running) return

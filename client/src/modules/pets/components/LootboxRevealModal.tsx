@@ -36,7 +36,6 @@ export function LootboxRevealModal({
 
     // Animate: start at 0, then transition to the offset that centres WINNER_AT.
     useEffect(() => {
-        console.log(reel)
         const el = stripRef.current
         if (!el) return
         const jitter = (Math.random() - 0.5) * (TILE * 0.5)   // don't always dead-centre

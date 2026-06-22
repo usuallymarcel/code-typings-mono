@@ -19,11 +19,9 @@ function thumb(s?: SpeciesEntry): string | undefined {
 export function LootboxRevealModal({
     result, species,
 }: { result: LootboxOpenResult; species: SpeciesEntry[] }) {
-    const { rarity, speciesId, instanceId, spriteSheets } = result.rolled
+    const { rarity, speciesId, spriteSheets } = result.rolled
     const { closeModal } = useModal()
-    const { setActive, refetch } = usePetInventory()
     const [done, setDone] = useState(false)
-    const [added, setAdded] = useState(false)
     const stripRef = useRef<HTMLDivElement>(null)
 
     const winnerImg = spriteSheets.idle ?? Object.values(spriteSheets)[0]
@@ -51,8 +49,6 @@ export function LootboxRevealModal({
         const t = setTimeout(() => setDone(true), reduce ? 0 : SPIN_MS)
         return () => { cancelAnimationFrame(raf); clearTimeout(t) }
     }, [])
-
-    const addToParty = async () => { await setActive(instanceId, true); await refetch(); setAdded(true) }
 
     return (
         <div className="flex flex-col items-center gap-4 p-6 rounded-xl [background:var(--bg)]"
@@ -82,10 +78,6 @@ export function LootboxRevealModal({
                     <span className="uppercase tracking-widest font-bold" style={{ color: RARITY_COLOR[rarity] }}>{rarity}</span>
                     <span className="font-semibold">{winnerName}</span>
                     <div className="flex gap-2">
-                        <button onClick={addToParty} disabled={added}
-                                className="text-black bg-green-600 hover:bg-green-800 rounded-xl px-4 py-1">
-                            {added ? 'Added!' : 'Add to party'}
-                        </button>
                         <button onClick={closeModal} className="rounded-xl px-4 py-1 border">Close</button>
                     </div>
                 </>

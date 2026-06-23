@@ -308,7 +308,7 @@ const displayTypeText = () => {
 
 
     return (
-        <div>
+        <div className='max-w-250'>
             <div className="flex items-center justify-end pr-5">
             {loading && <p className="pr-5">Loading...</p>}
             {user?.name && <p className="pr-5">Logged in as: {user?.name}</p>}
@@ -360,15 +360,12 @@ const displayTypeText = () => {
             <p className="my-4 italic text-sm">Press <span className="font-bold">Esc</span> to reset text</p>
 
 
-            <div className="flex flex-wrap gap-5 justify-center my-5">
+            <div className="gap-5 justify-center my-5">
                 <div className='flex flex-wrap gap-5 justify-center'>
-
                 {/* <OutlineButton onClick={reset}>Reset</OutlineButton> */}
                 <OutlineButton onClick={() => setJuice(prev => !prev)}>
                     juice: <span className="inline-block w-8 text-center">{juice ? "ON" : "OFF"}</span>
                 </OutlineButton>
-                </div>
-                <div className='flex flex-wrap gap-5 justify-center'>
                 {/* <OutlineButton onClick={() => openModal(<FileUploader onUploadSuccess={() => {
                 setReloadTexts(prev => prev + 1)
                 }}/>)}>
@@ -386,12 +383,9 @@ const displayTypeText = () => {
 
 
                 
-                {user && <OutlineButton onClick={() => openModal(
-                        <div className="flex flex-col gap-4 items-center max-h-[80vh] overflow-auto">
-                            <LootboxStore onOpened={() => { refetchSpecies(); refetchInventory() }} />
-                            <PetInventory />
-                        </div>
-                    )}>PETS!!!</ OutlineButton>}
+                {user && <OutlineButton onClick={() => openModal(<PetInventory />)}>Pets</ OutlineButton>}
+                {user && <OutlineButton onClick={() => openModal(<LootboxStore />)}>Lootboxes</OutlineButton>}
+ 
                 </div>
             </div>
 

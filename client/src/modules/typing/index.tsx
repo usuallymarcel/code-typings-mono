@@ -22,8 +22,6 @@ import { ThemeShop } from '../themes'
 import Chat from '../chat'
 import { LootboxStore } from '../pets/components/LootboxStore'
 import { PetInventory } from '../pets/components/PetInventory'
-import { usePetSpecies } from '../pets/hooks/usePetSpecies'
-import { usePetInventory } from '../pets/hooks/usePetInventory'
 
 const sizeClasses = [
     "text-xl",
@@ -62,8 +60,6 @@ export default function Typing() {
     const { user, loading, logout } = useUser()
     const { sendLeaderboardEntry } = useLeaderboardEntry()
     const { points, updatePoints } = usePointsContext()
-    const { refetch: refetchSpecies } = usePetSpecies()
-    const { refetch: refetchInventory } = usePetInventory()
 
     // const typeSpaceSound = useRef(new Audio("/sounds/spacebar.wav"))
 

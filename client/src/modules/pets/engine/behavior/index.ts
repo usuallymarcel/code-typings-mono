@@ -1,5 +1,6 @@
 import type { PetSpecies, RunTimePet } from "../../models/pet"
 import { getBehavior } from "./behaviorRegistry"
+import "../behaviors"
 
 export function updateBehavior(pet: RunTimePet, deltaTime: number) {
     pet.behaviorTimer -= deltaTime

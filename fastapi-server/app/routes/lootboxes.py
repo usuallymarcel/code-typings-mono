@@ -24,7 +24,7 @@ def list_boxes(request: Request, db = Depends(get_db)):
     for box in boxes:
         out.append({
             "sku": box.sku,
-            "displayName": box.name,
+            "name": box.name,
             "price": box.price,
             "odds": {k: v for k, v in box.drop_table["rarities"].items()}
         })

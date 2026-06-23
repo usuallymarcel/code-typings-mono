@@ -3,12 +3,13 @@ import { useModal } from '../../../components/modal/ModalContext'
 import { RARITY_COLOR } from './rarity'
 import type { LootboxOpenResult, SpeciesEntry } from '../models/pet'
 import { serverUrl } from '../../../utils/env'
+import { usePetInventoryContext } from '../contexts/PetInventoryContext'
 
 const TILE = 96            // px per reel tile (incl. gap)
 const VISIBLE = 5          // tiles visible in the window → window width = 480px
-const REEL_LEN = 48        // total tiles on the strip
+const REEL_LEN = 80        // total tiles on the strip
 const WINNER_AT = REEL_LEN - 5   // land near the end so it scrolls a long way
-const SPIN_MS = 8200
+const SPIN_MS = 15200
 
 function thumb(s?: SpeciesEntry): string | undefined {
     if (!s) return undefined
@@ -23,6 +24,8 @@ export function LootboxRevealModal({
     const [done, setDone] = useState(false)
     const stripRef = useRef<HTMLDivElement>(null)
 
+    const { refetch } = usePetInventoryContext()
+
     const winnerImg = spriteSheets.idle ?? Object.values(spriteSheets)[0]
     const winnerName = species.find(s => s.speciesId === speciesId)?.displayName ?? speciesId
 
@@ -32,6 +35,12 @@ export function LootboxRevealModal({
         const s = species.length ? species[Math.floor(Math.random() * species.length)] : undefined
         return { img: thumb(s), rarity: s?.rarity ?? 'common', key: i }
     }), [species, winnerImg, rarity])
+
+    useEffect(() => {
+        if (done) {
+            refetch()
+        }
+    }, [done])
 
     // Animate: start at 0, then transition to the offset that centres WINNER_AT.
     // Always plays — this is a user-initiated reward reveal, so we intentionally
@@ -83,7 +92,9 @@ export function LootboxRevealModal({
                     <span className="uppercase tracking-widest font-bold" style={{ color: RARITY_COLOR[rarity] }}>{rarity}</span>
                     <span className="font-semibold">{winnerName}</span>
                     <div className="flex gap-2">
-                        <button onClick={closeModal} className="rounded-xl px-4 py-1 border">Close</button>
+                        <button onClick={() => {
+                            closeModal()
+                            }} className="rounded-xl px-4 py-1 border">Close</button>
                     </div>
                 </>
             )}

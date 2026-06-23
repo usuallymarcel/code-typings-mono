@@ -41,23 +41,30 @@ THEMES = {
      "terminal": {
         "price": 50000,
         "css": """
-[data-theme="midnight"] {
+[data-theme="terminal"] {
   --bg:
+    repeating-linear-gradient(
+      0deg,
+      rgba(51, 255, 102, 0.06) 0px,
+      rgba(51, 255, 102, 0.06) 1px,
+      transparent 1px,
+      transparent 3px
+    ),
     radial-gradient(
       circle at center,
-      #121212,
-      #080808
+      #021a0a,
+      #000000 90%
     );
 
-  --text: #cccccc;
-  --button-bg: #1e1e1e;
-  --button-bg-bg: #111111;
-  --button-text: #cccccc;
+  --text: #33ff66;
+  --button-bg: #0a1a0f;
+  --button-bg-bg: #050d08;
+  --button-text: #33ff66;
 
-  --typings-base: #666666;
-  --typings-correct: #cccccc;
-  --typings-error: #ff5555;
-  --typings-cursor: #cccccc;
+  --typings-base: #1f5c33;
+  --typings-correct: #4dff7a;
+  --typings-error: #ff3b3b;
+  --typings-cursor: #4dff7a;
 }
 """
     },
@@ -65,17 +72,21 @@ THEMES = {
     "vscode": {
         "price": 50000,
         "css": """
-[data-theme="workspace"] {
+[data-theme="vscode"] {
   --bg:
-    linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px),
-    #1e1e1e;
-  background-size: 24px 24px;
+    linear-gradient(
+      90deg,
+      #333333 0px,
+      #333333 48px,
+      #252526 48px,
+      #252526 288px,
+      #1e1e1e 288px
+    );
 
   --text: #d4d4d4;
-  --button-bg: #2d2d30;
-  --button-bg-bg: #252526;
-  --button-text: #d4d4d4;
+  --button-bg: #0e639c;
+  --button-bg-bg: #094771;
+  --button-text: #ffffff;
 
   --typings-base: #6a9955;
   --typings-correct: #d4d4d4;
@@ -88,24 +99,33 @@ THEMES = {
     "github": {
         "price": 5000,
         "css": """
-[data-theme="repository"] {
+[data-theme="github"] {
   --bg:
-    radial-gradient(
-      circle at top left,
-      rgba(88,166,255,0.08),
-      transparent 35%
+    repeating-linear-gradient(
+      0deg,
+      rgba(57, 211, 83, 0.05) 0px,
+      rgba(57, 211, 83, 0.05) 11px,
+      transparent 11px,
+      transparent 14px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      rgba(57, 211, 83, 0.05) 0px,
+      rgba(57, 211, 83, 0.05) 11px,
+      transparent 11px,
+      transparent 14px
     ),
     #0d1117;
 
-  --text: #c9d1d9;
-  --button-bg: #21262d;
-  --button-bg-bg: #161b22;
-  --button-text: #c9d1d9;
+  --text: #e6edf3;
+  --button-bg: #238636;
+  --button-bg-bg: #196c2e;
+  --button-text: #ffffff;
 
   --typings-base: #8b949e;
-  --typings-correct: #58a6ff;
+  --typings-correct: #39d353;
   --typings-error: #f85149;
-  --typings-cursor: #79c0ff;
+  --typings-cursor: #58a6ff;
 }
 """
     },
@@ -113,18 +133,23 @@ THEMES = {
 "eye bleach": {
     "price": 50000,
     "css": """
-[data-theme="briefing"] {
-  --bg: #f3f3f3;
-  --text: #1e1e1e;
+[data-theme="eye bleach"] {
+  --bg:
+    radial-gradient(
+      circle at 50% 30%,
+      #ffffff,
+      #fbfbfb 100%
+    );
 
-  --button-bg: #e1e1e1;
-  --button-bg-bg: #d6d6d6;
-  --button-text: #1e1e1e;
+  --text: #111111;
+  --button-bg: #2b579a;
+  --button-bg-bg: #1e3f70;
+  --button-text: #ffffff;
 
-  --typings-base: #6a9955;
-  --typings-correct: #1e1e1e;
-  --typings-error: #d32f2f;
-  --typings-cursor: #007acc;
+  --typings-base: #c8c8c8;
+  --typings-correct: #111111;
+  --typings-error: #d13438;
+  --typings-cursor: #0078d4;
 }
 """
 },
@@ -132,33 +157,33 @@ THEMES = {
     "spreadsheet": {
         "price": 50000,
         "css": """
-[data-theme="blueprint"] {
+[data-theme="spreadsheet"] {
   --bg:
     repeating-linear-gradient(
       0deg,
-      rgba(255,255,255,0.03) 0px,
-      rgba(255,255,255,0.03) 1px,
+      #d0d7de 0px,
+      #d0d7de 1px,
       transparent 1px,
-      transparent 24px
+      transparent 28px
     ),
     repeating-linear-gradient(
       90deg,
-      rgba(255,255,255,0.03) 0px,
-      rgba(255,255,255,0.03) 1px,
+      #d0d7de 0px,
+      #d0d7de 1px,
       transparent 1px,
-      transparent 80px
+      transparent 90px
     ),
-    #1e1e1e;
+    #ffffff;
 
-  --text: #d4d4d4;
-  --button-bg: #2d2d30;
-  --button-bg-bg: #252526;
-  --button-text: #d4d4d4;
+  --text: #1e1e1e;
+  --button-bg: #107c41;
+  --button-bg-bg: #0b5e30;
+  --button-text: #ffffff;
 
-  --typings-base: #808080;
-  --typings-correct: #d4d4d4;
-  --typings-error: #f44747;
-  --typings-cursor: #569cd6;
+  --typings-base: #9aa0a6;
+  --typings-correct: #107c41;
+  --typings-error: #d13438;
+  --typings-cursor: #107c41;
 }
 """
     },

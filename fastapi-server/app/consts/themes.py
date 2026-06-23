@@ -38,6 +38,130 @@ THEMES = {
 }
 """
     },
+     "terminal": {
+        "price": 50000,
+        "css": """
+[data-theme="midnight"] {
+  --bg:
+    radial-gradient(
+      circle at center,
+      #121212,
+      #080808
+    );
+
+  --text: #cccccc;
+  --button-bg: #1e1e1e;
+  --button-bg-bg: #111111;
+  --button-text: #cccccc;
+
+  --typings-base: #666666;
+  --typings-correct: #cccccc;
+  --typings-error: #ff5555;
+  --typings-cursor: #cccccc;
+}
+"""
+    },
+
+    "vscode": {
+        "price": 50000,
+        "css": """
+[data-theme="workspace"] {
+  --bg:
+    linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px),
+    #1e1e1e;
+  background-size: 24px 24px;
+
+  --text: #d4d4d4;
+  --button-bg: #2d2d30;
+  --button-bg-bg: #252526;
+  --button-text: #d4d4d4;
+
+  --typings-base: #6a9955;
+  --typings-correct: #d4d4d4;
+  --typings-error: #f44747;
+  --typings-cursor: #569cd6;
+}
+"""
+    },
+
+    "github": {
+        "price": 5000,
+        "css": """
+[data-theme="repository"] {
+  --bg:
+    radial-gradient(
+      circle at top left,
+      rgba(88,166,255,0.08),
+      transparent 35%
+    ),
+    #0d1117;
+
+  --text: #c9d1d9;
+  --button-bg: #21262d;
+  --button-bg-bg: #161b22;
+  --button-text: #c9d1d9;
+
+  --typings-base: #8b949e;
+  --typings-correct: #58a6ff;
+  --typings-error: #f85149;
+  --typings-cursor: #79c0ff;
+}
+"""
+    },
+
+"eye bleach": {
+    "price": 50000,
+    "css": """
+[data-theme="briefing"] {
+  --bg: #f3f3f3;
+  --text: #1e1e1e;
+
+  --button-bg: #e1e1e1;
+  --button-bg-bg: #d6d6d6;
+  --button-text: #1e1e1e;
+
+  --typings-base: #6a9955;
+  --typings-correct: #1e1e1e;
+  --typings-error: #d32f2f;
+  --typings-cursor: #007acc;
+}
+"""
+},
+
+    "spreadsheet": {
+        "price": 50000,
+        "css": """
+[data-theme="blueprint"] {
+  --bg:
+    repeating-linear-gradient(
+      0deg,
+      rgba(255,255,255,0.03) 0px,
+      rgba(255,255,255,0.03) 1px,
+      transparent 1px,
+      transparent 24px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      rgba(255,255,255,0.03) 0px,
+      rgba(255,255,255,0.03) 1px,
+      transparent 1px,
+      transparent 80px
+    ),
+    #1e1e1e;
+
+  --text: #d4d4d4;
+  --button-bg: #2d2d30;
+  --button-bg-bg: #252526;
+  --button-text: #d4d4d4;
+
+  --typings-base: #808080;
+  --typings-correct: #d4d4d4;
+  --typings-error: #f44747;
+  --typings-cursor: #569cd6;
+}
+"""
+    },
 
     "forest": {
         "price": 100000,

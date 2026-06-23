@@ -13,12 +13,26 @@ per-frame transforms (bob, leg-swap, tilt, squash, fade, hop...).
 It has NO third-party dependencies. PNGs are written with a hand-rolled encoder
 built on the standard library `zlib` + `struct`. Runs on any Python 3.8+.
 
+The pet roster is NOT hard-coded here anymore. Each pet lives as one entry in a
+JSON file under tools/sprite_forge/pets/. The base game roster is in
+pets/base_pets.json; every extra lootbox drops its own pets/<box>.json. By
+default the forge loads ALL of them; use --pets to pick specific files.
+
 Usage
 -----
-    python tools/sprite_forge/ascii_to_sprites.py                 # build everything
+    python tools/sprite_forge/ascii_to_sprites.py                 # build everything (pets/*.json)
     python tools/sprite_forge/ascii_to_sprites.py --only desk_gun # one species
     python tools/sprite_forge/ascii_to_sprites.py --list          # list species/behaviors
     python tools/sprite_forge/ascii_to_sprites.py --out some/dir  # override output dir
+    python tools/sprite_forge/ascii_to_sprites.py --pets pets/cryptid_corner.json   # one file (repeatable)
+
+Pet file format (JSON): { "<species_id>": { "grid": [16 strings], "behaviors": [...] }, ... }
+    - "grid"      : 16 rows of 16 chars (see PALETTE; '.'/' ' = transparent).
+    - "behaviors" : behavior ids to render a sheet for. May be omitted if "bag"
+                    is given, in which case it's the de-duplicated bag.
+    - any other keys (display_name, rarity, speed, bag, ...) are ignored by the
+      forge but used by tools/sprite_forge/build_seeds.py to emit the seed SQL.
+    - keys starting with "_" are skipped (reserved for file-level metadata).
 
 Output (default): fastapi-server/pet_assets/
     <species_id>/<behavior>.png        e.g. desk_gun/wander.png  (384x64, 6 frames)
@@ -26,10 +40,12 @@ Output (default): fastapi-server/pet_assets/
 
 The frame counts / fps below MUST match the `animations` JSON in each species'
 pet_species seed row (docs/todo.md §C). They are the single source of truth here;
-copy them into the migration when you add a species.
+build_seeds.py reads them straight from BEHAVIOR_ANIM so the SQL can't drift.
 """
 
 import argparse
+import glob
+import json
 import math
 import os
 import struct
@@ -84,6 +100,10 @@ PALETTE = {
     "M": (140, 92, 60, 255),    # brown
     "S": (235, 200, 165, 255),  # skin/tan
     "X": (60, 60, 70, 255),     # gunmetal dark
+    "N": (235, 130, 170, 255),  # pink (pigs, icing, axolotls, shrimp)
+    "U": (95, 58, 36, 255),     # dark brown / crust / shadow
+    "V": (130, 215, 95, 255),   # lime / slime / radioactive
+    "I": (120, 200, 255, 255),  # ice / BSOD blue / milk-glow
 }
 
 CELL = 4   # each ASCII cell -> CELL x CELL pixels  (16 * 4 = 64px frame)
@@ -112,6 +132,15 @@ BEHAVIOR_ANIM = {
     "flee_cursor":   (6, 12, "run"),
     "jitter":        (6, 16, "jitter"),
     "hop":           (6, 9,  "hop"),
+    # ---- new behaviours for the bonus lootboxes ----
+    "orbit":         (6, 9,  "walk"),     # circles the cursor like a moon
+    "zoomies":       (6, 14, "run"),      # full-speed dash across the screen
+    "roll":          (6, 12, "spin"),     # rolls along the floor (round pets)
+    "float":         (6, 6,  "float"),    # ghostly hover, ignores the ground
+    "headbang":      (6, 12, "headbang"), # violent metal nodding, in place
+    "vibrate":       (6, 18, "buzz"),     # ultra micro-shake, ~no net travel
+    "backflip":      (6, 12, "flip"),     # parabolic flip with fake rotation
+    "panic":         (6, 16, "panic"),    # frantic running in all directions
 }
 
 
@@ -159,6 +188,28 @@ def frame_offsets(style, i, n):
         h = -round(10 * math.sin(math.pi * p))
         dy = h
         squash = 1.0 + (0.10 if i in (0, n - 1) else -0.05)
+    elif style == "float":
+        # ghostly hover: slow vertical bob + gentle horizontal sway, no legs
+        dy = -round(4 * math.sin(math.pi * p))
+        dx = round(2 * math.sin(2 * math.pi * p))
+        squash = 1.0 + 0.05 * math.sin(2 * math.pi * p)
+    elif style == "headbang":
+        # whip the head down and up — top of the body swings hard
+        dy = -round(5 * abs(s))
+        tilt = 11 if i % 2 == 0 else -3
+    elif style == "buzz":
+        # ultra-fine vibration, smaller + faster-feeling than jitter
+        dx = ((i * 7) % 3) - 1
+        dy = ((i * 5) % 3) - 1
+    elif style == "flip":
+        # parabolic hop; the fake rotation is applied via hsquash in build_frame
+        dy = -round(12 * math.sin(math.pi * p))
+        squash = max(0.18, abs(math.cos(math.pi * p)))
+    elif style == "panic":
+        # frantic: jerky offsets + a manic lean that flips every frame
+        dx = ((i * 41) % 7) - 3
+        dy = -round(3 * abs(s))
+        tilt = 9 if i % 2 == 0 else -9
     return dx, dy, tilt, alpha, leg, squash
 
 
@@ -223,7 +274,8 @@ def hsquash(buf, factor):
 
 def build_frame(base, style, i, n):
     dx, dy, tilt, alpha, leg, squash = frame_offsets(style, i, n)
-    if style == "spin":
+    if style in ("spin", "flip"):
+        # squash is consumed by hsquash (fake rotation); carry dx/dy/tilt through
         framed = hsquash(base, squash)
         return transform(framed, dx, dy, tilt, alpha, leg, 1.0)
     return transform(base, dx, dy, tilt, alpha, leg, squash)
@@ -250,254 +302,43 @@ def build_silhouette(base):
 
 
 # --------------------------------------------------------------------------- #
-#  5. The pet roster  —  one base grid + behaviour list per species.          #
-#     (The funny part. 16x16 grids; '.' is transparent.)                      #
+#  5. The pet roster  —  loaded from JSON files in pets/ (see module docstring) #
+#     base_pets.json is the original roster; every bonus lootbox adds its own.  #
 # --------------------------------------------------------------------------- #
 
-PETS = {
-    # ---- the existing cat, given a server-side sheet so the gated pipeline works
-    "cat": {
-        "behaviors": ["idle", "wander", "follow_cursor", "sleep"],
-        "grid": [
-            "................",
-            "..O..........O..",
-            "..OO........OO..",
-            "..OOOOOOOOOOOO..",
-            "..OOEOOOOOOEOOO.",
-            "..OOOOOWWOOOOO..",
-            "..OOOOOOOOOOOO..",
-            "..OOOOOOOOOOOO..",
-            "..O.OOOOOOOO.O..",
-            "...OOOOOOOOOO...",
-            "...OOOOOOOOOO...",
-            "...OO.OOOO.OO...",
-            "....O.O..O.O....",
-            "................",
-            "................",
-            "................",
-        ],
-    },
-    # ---- common: a stick figure who likes to dance
-    "stick_figure": {
-        "behaviors": ["idle", "wander", "dance", "sleep"],
-        "grid": [
-            "................",
-            ".....KKKK.......",
-            "....K....K......",
-            "....K.EE.K......",
-            "....K.KK.K......",
-            ".....KKKK.......",
-            "......KK........",
-            "..KKKKKKKKKKK...",
-            "......KK........",
-            "......KK........",
-            "......KK........",
-            ".....K..K.......",
-            "....K....K......",
-            "...K......K.....",
-            "..K........K....",
-            "................",
-        ],
-    },
-    # ---- common: a pet rock. does almost nothing. that's the joke.
-    "pet_rock": {
-        "behaviors": ["idle", "sleep"],
-        "grid": [
-            "................",
-            "................",
-            "....DDDDDD......",
-            "...DLLLLLLD.....",
-            "..DLLLLLLLLD....",
-            "..DLWWLLWWLD....",
-            "..DLWELLWELD....",
-            "..DLLLLLLLLD....",
-            "..DLLLLLLLLD....",
-            "..DLLLLLLLLD....",
-            "...DLLLLLLD.....",
-            "....DDDDDD......",
-            "................",
-            "................",
-            "................",
-            "................",
-        ],
-    },
-    # ---- uncommon: rubber duck, the debugging companion
-    "rubber_duck": {
-        "behaviors": ["idle", "wander", "follow_cursor", "sleep"],
-        "grid": [
-            "................",
-            ".......YYYY.....",
-            "......YYYYYY....",
-            "......YYEYYY....",
-            "....OOYYYYYY....",
-            "....OOYYYYYY....",
-            "......YYYYYY....",
-            ".....YYYYYYYY...",
-            "....YYYYYYYYYY..",
-            "...YYYYYYYYYYYY.",
-            "...YYYYYYYYYYYY.",
-            "....YYYYYYYYYY..",
-            ".....YYYYYYYY...",
-            "................",
-            "................",
-            "................",
-        ],
-    },
-    # ---- rare: a sidearm for your desktop. the "pet gun".
-    "desk_gun": {
-        "behaviors": ["idle", "wander", "recoil", "sleep"],
-        "grid": [
-            "................",
-            "................",
-            "................",
-            "..XXXXXXXXXX....",
-            "..XLLLLLLLLX....",
-            "..XXXXXXXXXX....",
-            "..XXX..X........",
-            "....X..X........",
-            "....XXXX........",
-            "....XEEX........",
-            "....XXXX........",
-            "................",
-            "................",
-            "................",
-            "................",
-            "................",
-        ],
-    },
-    # ---- rare: 404 ghost. blinks out of existence. pet not found.
-    "ghost_404": {
-        "behaviors": ["idle", "wander", "teleport", "sleep"],
-        "grid": [
-            "................",
-            "......WWWW......",
-            ".....WWWWWW.....",
-            "....WWWWWWWW....",
-            "....WWEWWEWW....",
-            "....WWWWWWWW....",
-            "....WWWWWWWW....",
-            "....WPWWWWPW....",
-            "....WWWWWWWW....",
-            "....WWWWWWWW....",
-            "....WWWWWWWW....",
-            "....W.WW.WW.W...",
-            "................",
-            "................",
-            "................",
-            "................",
-        ],
-    },
-    # ---- uncommon: a caffeinated mug. vibrates.
-    "coffee_mug": {
-        "behaviors": ["idle", "jitter", "wander", "sleep"],
-        "grid": [
-            "................",
-            ".....L..L.......",
-            "......L..L......",
-            ".....L..L.......",
-            "....WWWWWWW.....",
-            "....WRRRRRW.WW..",
-            "....WRRRRRWW.W..",
-            "....WRRRRRW..W..",
-            "....WRRRRRWW.W..",
-            "....WRRRRRW.WW..",
-            "....WWWWWWW.....",
-            "....WWWWWWW.....",
-            "................",
-            "................",
-            "................",
-            "................",
-        ],
-    },
-    # ---- epic: bonk hammer. hops and bonks.
-    "bonk_hammer": {
-        "behaviors": ["idle", "hop", "wander"],
-        "grid": [
-            "................",
-            "..DDDDDDDDDD....",
-            "..DLLLLLLLLD....",
-            "..DLLLLLLLLD....",
-            "..DDDDDDDDDD....",
-            ".....MM.........",
-            ".....MM.........",
-            ".....MM.........",
-            ".....MM.........",
-            ".....MM.........",
-            ".....MM.........",
-            "....MMMM........",
-            "................",
-            "................",
-            "................",
-            "................",
-        ],
-    },
-    # ---- epic: disco ball. spins, sparkles. (event pet)
-    "disco_ball": {
-        "behaviors": ["idle", "spin", "wander"],
-        "grid": [
-            ".......L........",
-            ".......L........",
-            ".....CCCCCC.....",
-            "....CWCWCWCWC...",
-            "...CWCWCWCWCW...",
-            "...WCWCWCWCWC...",
-            "...CWCWCWCWCW...",
-            "...WCWCWCWCWC...",
-            "...CWCWCWCWCW...",
-            "....CWCWCWCWC...",
-            ".....CCCCCC.....",
-            "................",
-            "................",
-            "................",
-            "................",
-            "................",
-        ],
-    },
-    # ---- legendary: loot goblin. runs AWAY from your cursor. drops nothing.
-    "loot_goblin": {
-        "behaviors": ["idle", "flee_cursor", "wander", "sleep"],
-        "grid": [
-            "................",
-            "......GGGG......",
-            ".....GGGGGG.....",
-            ".....GEGGEG.....",
-            ".....GGGGGG.....",
-            "......GGGG......",
-            "....MMGGGGMM....",
-            "...MMMGGGGMMM...",
-            "...MMMGGGGMMM...",
-            "....MMGGGGMM....",
-            "......GGGG......",
-            ".....G....G.....",
-            "....G......G....",
-            "................",
-            "................",
-            "................",
-        ],
-    },
-    # ---- common: a semicolon the dev forgot. surprisingly lively.
-    "semicolon": {
-        "behaviors": ["idle", "wander", "sleep"],
-        "grid": [
-            "................",
-            "................",
-            "................",
-            "......GGGG......",
-            "......GGGG......",
-            "......GGGG......",
-            "................",
-            "................",
-            "......GGGG......",
-            "......GGGG......",
-            "......GGGG......",
-            ".....GGG........",
-            "....GGG.........",
-            "...GG...........",
-            "................",
-            "................",
-        ],
-    },
-}
+def default_pets_dir():
+    here = os.path.dirname(os.path.abspath(__file__))
+    return os.path.join(here, "pets")
+
+
+def discover_pet_files():
+    """All pets/*.json, sorted so base_pets.json loads first (alphabetical)."""
+    return sorted(glob.glob(os.path.join(default_pets_dir(), "*.json")))
+
+
+def load_pets(paths):
+    """Merge pet definitions from one or more JSON files into one dict.
+
+    Each file maps species_id -> {"grid": [...], "behaviors"|"bag": [...], ...}.
+    Keys starting with "_" are skipped (reserved for file-level metadata). Extra
+    keys (display_name, rarity, speed, ...) are ignored by the forge but read by
+    build_seeds.py. On an id clash the later file wins (and we warn).
+    """
+    pets = {}
+    for path in paths:
+        with open(path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        for species_id, spec in data.items():
+            if species_id.startswith("_"):
+                continue
+            if "behaviors" not in spec:
+                # de-duplicate the weighted bag, preserving first-seen order
+                spec["behaviors"] = list(dict.fromkeys(spec.get("bag", [])))
+            if species_id in pets:
+                print("  ! duplicate species '%s' (in %s) -- overriding earlier one"
+                      % (species_id, os.path.basename(path)))
+            pets[species_id] = spec
+    return pets
 
 
 # --------------------------------------------------------------------------- #
@@ -510,9 +351,9 @@ def default_out():
     return os.path.join(repo, "fastapi-server", "pet_assets")
 
 
-def build(out_dir, only=None):
+def build(out_dir, pets, only=None):
     count = 0
-    for species, spec in PETS.items():
+    for species, spec in pets.items():
         if only and species != only:
             continue
         base = rasterize(spec["grid"])
@@ -537,23 +378,35 @@ def main():
     ap = argparse.ArgumentParser(description="ASCII art -> animated pixel sprite sheets")
     ap.add_argument("--out", default=default_out(), help="output directory (default: fastapi-server/pet_assets)")
     ap.add_argument("--only", help="only build this species_id")
+    ap.add_argument("--pets", action="append", metavar="FILE",
+                    help="pet JSON file to load (repeatable; default: all pets/*.json)")
     ap.add_argument("--list", action="store_true", help="list species + behaviors and exit")
     args = ap.parse_args()
 
+    pet_files = args.pets if args.pets else discover_pet_files()
+    if not pet_files:
+        print(f"No pet files found in {default_pets_dir()} (and none passed via --pets).",
+              file=sys.stderr)
+        sys.exit(1)
+    pets = load_pets(pet_files)
+    if not pets:
+        print("Loaded 0 species — check your pet JSON files.", file=sys.stderr)
+        sys.exit(1)
+
     if args.list:
-        for species, spec in PETS.items():
-            print(f"{species:14s} -> {', '.join(spec['behaviors'])}")
+        for species, spec in pets.items():
+            print(f"{species:18s} -> {', '.join(spec['behaviors'])}")
         print("\nBehaviour styles:")
         for b, (frames, fps, style) in BEHAVIOR_ANIM.items():
             print(f"  {b:14s} {frames} frames @ {fps}fps  ({style})")
         return
 
-    if args.only and args.only not in PETS:
-        print(f"Unknown species '{args.only}'. Known: {', '.join(PETS)}", file=sys.stderr)
+    if args.only and args.only not in pets:
+        print(f"Unknown species '{args.only}'. Known: {', '.join(pets)}", file=sys.stderr)
         sys.exit(1)
 
     print(f"Building sprites -> {args.out}")
-    build(args.out, only=args.only)
+    build(args.out, pets, only=args.only)
 
 
 if __name__ == "__main__":

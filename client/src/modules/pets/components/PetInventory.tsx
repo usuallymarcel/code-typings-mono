@@ -16,12 +16,14 @@ export function PetInventory() {
     }
 
     return (
-        <div className="flex flex-col gap-2 p-4 [background:var(--bg)] rounded-xl border w-full max-w-md">
+        
+        <div className="flex flex-col p-4 [background:var(--bg)] rounded-xl border w-full">
             <h2 className="text-lg font-semibold text-center mb-1">Your pets ({inventory.length})</h2>
+            <div className="max-h-100 overflow-auto">
             {inventory.map(p => {
                 const rarity: Rarity = meta(p.speciesId)?.rarity ?? 'common'
                 return (
-                    <div key={p.instanceId} className="flex items-center justify-between border rounded-lg px-3 py-2">
+                    <div key={p.instanceId} className="flex items-center justify-between px-3 py-2">
                         <span className="font-medium" style={{ color: RARITY_COLOR[rarity] }}>
                             {p.nickname ?? meta(p.speciesId)?.displayName ?? p.speciesId}
                         </span>
@@ -36,6 +38,7 @@ export function PetInventory() {
                     </div>
                 )
             })}
+            </div>
         </div>
     )
 }

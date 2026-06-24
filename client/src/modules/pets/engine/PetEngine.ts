@@ -44,6 +44,7 @@ export class PetEngine {
             this.lastTime = time
 
             for (const pet of this.pets) {
+                // console.log(pet.species.displayName)
                 updateBehavior(pet, deltaTime)
                 updatePhysics(pet)
                 resolveScreenBounds(pet)

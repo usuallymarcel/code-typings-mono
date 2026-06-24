@@ -184,6 +184,7 @@ export default function Typing() {
         const value = e.target.value
 
         if (!startTime && value.length === 1) {
+            // eslint-disable-next-line react-hooks/purity
             setStartTime(Date.now())
         }
 
@@ -191,6 +192,7 @@ export default function Typing() {
             const score = Math.round(stats.wpm * (stats.accuracy/100))
             const category = textData.textLength.toString()
             
+            // eslint-disable-next-line react-hooks/purity
             setEndTime(Date.now())
             setTypingDisabled(true)
             if (user) {

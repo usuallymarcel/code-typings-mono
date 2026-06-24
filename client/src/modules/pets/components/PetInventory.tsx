@@ -5,13 +5,13 @@ import { usePetSpeciesContext } from '../contexts/PetSpeciesContext'
 import { useEffect } from 'react'
 
 export function PetInventory() {
-    const { inventory, setActive, loading, refetch } = usePetInventoryContext()
+    const { inventory, setActive, loading, refetch: refetchInventory } = usePetInventoryContext()
     const { species } = usePetSpeciesContext()
     const meta = (id: string) => species.find(s => s.speciesId === id)
     
     useEffect(() => {
-        refetch()
-    }, [refetch])
+        refetchInventory()
+    }, [refetchInventory])
 
     if (loading && inventory.length === 0) {
         return <p className="p-4 opacity-70">Loading…</p> 

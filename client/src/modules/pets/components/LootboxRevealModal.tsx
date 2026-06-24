@@ -3,7 +3,6 @@ import { useModal } from '../../../components/modal/ModalContext'
 import { RARITY_COLOR } from './rarity'
 import type { LootboxOpenResult, SpeciesEntry } from '../models/pet'
 import { serverUrl } from '../../../utils/env'
-import { usePetInventoryContext } from '../contexts/PetInventoryContext'
 
 const TILE = 96            // px per reel tile (incl. gap)
 const VISIBLE = 5          // tiles visible in the window → window width = 480px
@@ -24,23 +23,17 @@ export function LootboxRevealModal({
     const [done, setDone] = useState(false)
     const stripRef = useRef<HTMLDivElement>(null)
 
-    const { refetch } = usePetInventoryContext()
-
     const winnerImg = spriteSheets.idle ?? Object.values(spriteSheets)[0]
     const winnerName = species.find(s => s.speciesId === speciesId)?.displayName ?? speciesId
 
     // Build the reel once: random decoys, real winner pinned at WINNER_AT.
     const reel = useMemo(() => Array.from({ length: REEL_LEN }, (_, i) => {
         if (i === WINNER_AT) return { img: `${serverUrl}${winnerImg}`, rarity, key: i }
+        // eslint-disable-next-line react-hooks/purity
         const s = species.length ? species[Math.floor(Math.random() * species.length)] : undefined
         return { img: thumb(s), rarity: s?.rarity ?? 'common', key: i }
     }), [species, winnerImg, rarity])
 
-    useEffect(() => {
-        if (done) {
-            refetch()
-        }
-    }, [done])
 
     // Animate: start at 0, then transition to the offset that centres WINNER_AT.
     // Always plays — this is a user-initiated reward reveal, so we intentionally

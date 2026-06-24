@@ -8,6 +8,7 @@ import { ThemeProvider } from './utils/Theme/ThemeContext'
 import { Pets } from './modules/pets'
 import { PetInventoryProvider } from './modules/pets/contexts/PetInventoryContext'
 import { PetSpeciesProvider } from './modules/pets/contexts/PetSpeciesContext'
+import { LootboxProvider } from './modules/pets/contexts/LootboxContext'
 
 function App() {    
   // const [count, setCount] = useState(0)
@@ -19,6 +20,7 @@ function App() {
                     <PointsProvider>
                         <PetSpeciesProvider>
                             <PetInventoryProvider>
+                                <LootboxProvider>
                                 <ModalProvider>
                                         <div className="relative overflow-hidden min-h-screen">
                                             <Pets />
@@ -27,6 +29,7 @@ function App() {
                                             </div>
                                         </div>
                                 </ModalProvider>
+                                </LootboxProvider>
                             </PetInventoryProvider>
                         </PetSpeciesProvider>
                     </PointsProvider>

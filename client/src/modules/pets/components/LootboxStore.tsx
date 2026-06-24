@@ -1,14 +1,14 @@
 import { useModal } from '../../../components/modal/ModalContext'
 import { usePointsContext } from '../../points/contexts/PointsContext'
 import { useLootboxes } from '../hooks/useLootboxes'
-import { usePetSpecies } from '../hooks/usePetSpecies'
 import { LootboxRevealModal } from './LootboxRevealModal'
 import { RARITY_COLOR } from './rarity'
 import type { Rarity } from '../models/pet'
+import { usePetSpeciesContext } from '../contexts/PetSpeciesContext'
 
 export function LootboxStore({ onOpened }: { onOpened?: () => void }) {
     const { boxes, open, opening } = useLootboxes()
-    const { species } = usePetSpecies()
+    const { species } = usePetSpeciesContext()
     const { points, fetchPoints } = usePointsContext()
     const { openModal } = useModal()
 

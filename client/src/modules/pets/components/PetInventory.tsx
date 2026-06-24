@@ -1,11 +1,11 @@
-import { usePetSpecies } from '../hooks/usePetSpecies'
 import { RARITY_COLOR } from './rarity'
 import type { Rarity } from '../models/pet'
 import { usePetInventoryContext } from '../contexts/PetInventoryContext'
+import { usePetSpeciesContext } from '../contexts/PetSpeciesContext'
 
 export function PetInventory() {
     const { inventory, setActive, loading } = usePetInventoryContext()
-    const { species } = usePetSpecies()
+    const { species } = usePetSpeciesContext()
     const meta = (id: string) => species.find(s => s.speciesId === id)
 
     if (loading && inventory.length === 0) {

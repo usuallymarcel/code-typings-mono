@@ -7,6 +7,7 @@ import { PointsProvider } from './modules/points/contexts/PointsContext'
 import { ThemeProvider } from './utils/Theme/ThemeContext'
 import { Pets } from './modules/pets'
 import { PetInventoryProvider } from './modules/pets/contexts/PetInventoryContext'
+import { PetSpeciesProvider } from './modules/pets/contexts/PetSpeciesContext'
 
 function App() {    
   // const [count, setCount] = useState(0)
@@ -16,16 +17,18 @@ function App() {
         <ThemeProvider>
             <SoundProvider>
                     <PointsProvider>
+                        <PetSpeciesProvider>
                             <PetInventoryProvider>
-                        <ModalProvider>
-                                <div className="relative overflow-hidden min-h-screen">
-                                    <Pets />
-                                    <div className="flex items-center justify-center font-mono min-h-screen p-10">
-                                        <Typing />
-                                    </div>
-                                </div>
-                        </ModalProvider>
+                                <ModalProvider>
+                                        <div className="relative overflow-hidden min-h-screen">
+                                            <Pets />
+                                            <div className="flex items-center justify-center font-mono min-h-screen p-10">
+                                                <Typing />
+                                            </div>
+                                        </div>
+                                </ModalProvider>
                             </PetInventoryProvider>
+                        </PetSpeciesProvider>
                     </PointsProvider>
             </SoundProvider>
         </ThemeProvider>

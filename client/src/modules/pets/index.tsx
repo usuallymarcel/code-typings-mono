@@ -1,13 +1,13 @@
 import { useEffect, useMemo } from "react";
 import { usePets } from "./hooks/usePets";
-import { usePetSpecies } from "./hooks/usePetSpecies";
 import type { RunTimePet } from "./models/pet";
 import { toRuntimePet } from "./engine/factory";
 import { PetSprite } from "./components/PetSprite";
 import { usePetInventoryContext } from "./contexts/PetInventoryContext";
+import { usePetSpeciesContext } from "./contexts/PetSpeciesContext";
 
 export function Pets() {
-    const { species } = usePetSpecies()
+    const { species } = usePetSpeciesContext()
     const { inventory } = usePetInventoryContext()
     const { syncPets, pets } = usePets()
 

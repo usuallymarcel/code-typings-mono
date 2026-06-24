@@ -69,6 +69,19 @@ def open_box(sku: str, request: Request, db = Depends(get_db)):
         db.rollback()
         raise HTTPException(500, 'Could not open lootbox')
     
+    pool = []
+    seen = set()
+    for pool_rarity, species_ids in box.drop_table.get("speciesByRarity", {}).items():
+        for sid in species_ids:
+            if sid in seen:
+                continue
+            seen.add(sid)
+            pool.append({
+                "speciesId": sid,
+                "rarity": pool_rarity,
+                "previewUrl": f"/pet-assets/_silhouettes/{sid}.png"
+            })
+    
     return {
         "ok": True,
         "rolled": {
@@ -77,6 +90,7 @@ def open_box(sku: str, request: Request, db = Depends(get_db)):
             "instanceId": instance.instance_id,
             "spriteSheets": sign_sprite_urls_for_species(db, session.user_id, species_id),
         },
+        "pool": pool,
         "pointsRemaining": remaining
     }
     

@@ -44,6 +44,9 @@ def update_points(request: Request, data: UpdatePointsRequest, db = Depends(get_
 
     newPoints: int = points.points + data.score * multiplier
     update_user_points(db, session.user_id, newPoints)
+    db.commit()
+
+    return {'ok': True, 'points': newPoints}
 
 # @router.post('/flip_coin')
 # def flip_coin(request: Request, data: CoinFlipResquest, db = Depends(get_db)):

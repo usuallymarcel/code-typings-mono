@@ -20,6 +20,8 @@ import Gamble from '../points'
 import { usePointsContext } from '../points/contexts/PointsContext'
 import { ThemeShop } from '../themes'
 import Chat from '../chat'
+import { LootboxStore } from '../pets/components/LootboxStore'
+import { PetInventory } from '../pets/components/PetInventory'
 
 const sizeClasses = [
     "text-xl",
@@ -57,7 +59,7 @@ export default function Typing() {
 
     const { user, loading, logout } = useUser()
     const { sendLeaderboardEntry } = useLeaderboardEntry()
-    const { fetchPoints, points, updatePoints } = usePointsContext()
+    const { points, updatePoints } = usePointsContext()
 
     // const typeSpaceSound = useRef(new Audio("/sounds/spacebar.wav"))
 
@@ -182,6 +184,7 @@ export default function Typing() {
         const value = e.target.value
 
         if (!startTime && value.length === 1) {
+            // eslint-disable-next-line react-hooks/purity
             setStartTime(Date.now())
         }
 
@@ -189,12 +192,12 @@ export default function Typing() {
             const score = Math.round(stats.wpm * (stats.accuracy/100))
             const category = textData.textLength.toString()
             
+            // eslint-disable-next-line react-hooks/purity
             setEndTime(Date.now())
             setTypingDisabled(true)
             if (user) {
                 await sendLeaderboardEntry(score, category)
                 await updatePoints(score, category)
-                await fetchPoints()
             }
             // setScore(Math.round(stats.wpm * stats.accuracy * maxCombo.current))
             setScore(score)
@@ -303,7 +306,7 @@ const displayTypeText = () => {
 
 
     return (
-        <div>
+        <div className='max-w-250'>
             <div className="flex items-center justify-end pr-5">
             {loading && <p className="pr-5">Loading...</p>}
             {user?.name && <p className="pr-5">Logged in as: {user?.name}</p>}
@@ -355,15 +358,12 @@ const displayTypeText = () => {
             <p className="my-4 italic text-sm">Press <span className="font-bold">Esc</span> to reset text</p>
 
 
-            <div className="flex flex-wrap gap-5 justify-center my-5">
+            <div className="gap-5 justify-center my-5">
                 <div className='flex flex-wrap gap-5 justify-center'>
-
                 {/* <OutlineButton onClick={reset}>Reset</OutlineButton> */}
                 <OutlineButton onClick={() => setJuice(prev => !prev)}>
                     juice: <span className="inline-block w-8 text-center">{juice ? "ON" : "OFF"}</span>
                 </OutlineButton>
-                </div>
-                <div className='flex flex-wrap gap-5 justify-center'>
                 {/* <OutlineButton onClick={() => openModal(<FileUploader onUploadSuccess={() => {
                 setReloadTexts(prev => prev + 1)
                 }}/>)}>
@@ -378,6 +378,12 @@ const displayTypeText = () => {
                 {user && <OutlineButton onClick={() => openModal(<Gamble />)}>Gamble</OutlineButton>}
                 {user && <OutlineButton onClick={() => openModal(<ThemeShop />)}>Themes</OutlineButton>}
                 {<OutlineButton onClick={() => openModal(<Chat />)}>Chat</OutlineButton>}
+
+
+                
+                {user && <OutlineButton onClick={() => openModal(<PetInventory />)}>Pets</ OutlineButton>}
+                {user && <OutlineButton onClick={() => openModal(<LootboxStore />)}>Lootboxes</OutlineButton>}
+ 
                 </div>
             </div>
 

@@ -2,11 +2,16 @@ import { RARITY_COLOR } from './rarity'
 import type { Rarity } from '../models/pet'
 import { usePetInventoryContext } from '../contexts/PetInventoryContext'
 import { usePetSpeciesContext } from '../contexts/PetSpeciesContext'
+import { useEffect } from 'react'
 
 export function PetInventory() {
-    const { inventory, setActive, loading } = usePetInventoryContext()
+    const { inventory, setActive, loading, refetch } = usePetInventoryContext()
     const { species } = usePetSpeciesContext()
     const meta = (id: string) => species.find(s => s.speciesId === id)
+    
+    useEffect(() => {
+        refetch()
+    }, [refetch])
 
     if (loading && inventory.length === 0) {
         return <p className="p-4 opacity-70">Loading…</p> 
@@ -14,6 +19,7 @@ export function PetInventory() {
     if (inventory.length === 0) {
         return <p className="p-4 opacity-70">No pets yet — open a lootbox!</p>
     }
+
 
     return (
         

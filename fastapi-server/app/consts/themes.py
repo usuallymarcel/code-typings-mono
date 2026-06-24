@@ -97,7 +97,7 @@ THEMES = {
     },
 
     "github": {
-        "price": 5000,
+        "price": 50000,
         "css": """
 [data-theme="github"] {
   --bg:

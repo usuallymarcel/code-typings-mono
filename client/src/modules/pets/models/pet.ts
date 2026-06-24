@@ -66,6 +66,12 @@ export interface LootboxSummary {
     odds: Record<Rarity, number>
 }
 
+export interface LootboxPoolEntry {
+    speciesId: string
+    rarity: Rarity
+    previewUrl: string
+}
+
 export interface LootboxOpenResult {
     ok: true
     rolled: {
@@ -74,5 +80,6 @@ export interface LootboxOpenResult {
         instanceId: string
         spriteSheets: Record<BehaviorId, string>
     }
+    pool: LootboxPoolEntry[]
     pointsRemaining: string
 }

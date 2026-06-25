@@ -47,5 +47,22 @@ export function usePetInventory() {
 
     }, [fetchInventory])
 
-    return { inventory, loading, setActive, refetch: fetchInventory }
+    const setNickname = useCallback(async (instanceId: string, nickname: string) => {
+        try {
+            const res = await fetch(`${serverUrl}/pets/${instanceId}/nickname`, {
+                method: 'POST',
+                credentials: 'include',
+                headers: { 'Content-type': 'application/json' },
+                body: JSON.stringify({ nickname })
+            })
+
+            if (!res.ok) {
+                console.log('failed to change nickname')
+            }
+        } finally {
+            await fetchInventory()
+        }
+    }, [fetchInventory])
+
+    return { inventory, loading, setActive, refetch: fetchInventory, setNickname }
 }

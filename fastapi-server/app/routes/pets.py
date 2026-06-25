@@ -1,9 +1,9 @@
 from pydantic import BaseModel
 
 from app.database import get_db
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from app.utils.session_tokens import get_session_from_request
-from app.crud.pets import list_user_instances, set_active
+from app.crud.pets import get_pet_instance, list_user_instances, set_active, set_nickname
 from app.crud.pet_species import get_pet_species
 from app.utils.pet_assets import sign_sprite_url
 
@@ -71,3 +71,22 @@ def set_active_req(instance_id: str, body: SetActiveBody, request: Request, db =
     instance = set_active(db, session.user_id, instance_id, body.active)
 
     return {"ok": True, "active": instance.active}
+
+class SetNicknameBody(BaseModel):
+    nickname: str
+
+@router.post("/{instance_id}/nickname")
+def set_pet_nickname(instance_id: str, body: SetNicknameBody, request: Request, db = Depends(get_db)):
+    session = get_session_from_request(db, request)
+
+    instance = get_pet_instance(db, session.user_id, instance_id)
+
+    if not instance:
+        raise HTTPException(404, 'pet instance not found')
+
+    if instance.nickname != None:
+        raise HTTPException(400, "nickname already set")
+
+    instance = set_nickname(db, session.user_id, instance_id, body.nickname)
+
+    return {"ok": True, "instance":instance}

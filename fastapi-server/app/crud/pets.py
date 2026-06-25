@@ -22,3 +22,14 @@ def set_active(db: Session, user_id: int, instance_id: str, active: bool):
     db.commit()
     db.refresh(instance)
     return instance 
+
+def set_nickname(db: Session, uid: int, instance_id: str, nickname: str):
+    instance = db.query(Pet_Instance).filter(Pet_Instance.user_id == uid, Pet_Instance.instance_id == instance_id).first()
+
+    instance.nickname = nickname
+    db.commit()
+    db.refresh(instance)
+    return instance
+
+def get_pet_instance(db: Session, uid: int, instance_id: str):
+    return db.query(Pet_Instance).filter(Pet_Instance.user_id == uid, Pet_Instance.instance_id == instance_id).first()

@@ -35,6 +35,7 @@ export interface PetInstance {
 
 export interface RunTimePet {
     instanceId: string
+    nickname?: string
     species: PetSpecies
     x: number
     y: number

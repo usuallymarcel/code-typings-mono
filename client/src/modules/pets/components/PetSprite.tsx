@@ -20,10 +20,28 @@ export function PetSprite({ pet }: { pet: RunTimePet }) {
             style={{
                 width: pet.species.width,
                 height: pet.species.height,
-                imageRendering: 'pixelated',
-                backgroundRepeat: 'no-repeat',
-                willChange: 'transform',
             }}
-        />
+        >
+            <span
+                className="absolute text-[10px] whitespace-nowrap"
+                style={{
+                    left: '50%',
+                    top: '100%',
+                    transform: 'translateX(-50%)',
+                }}
+            >
+                {pet.nickname}
+            </span>
+
+            <div
+                style={{
+                    width: pet.species.width,
+                    height: pet.species.height,
+                    imageRendering: 'pixelated',
+                    backgroundRepeat: 'no-repeat',
+                    willChange: 'transform',
+                }}
+            />
+        </div>
     )
 }

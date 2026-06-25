@@ -3,6 +3,7 @@ import type { PetInstance, PetSpecies, RunTimePet } from "../models/pet";
 export function toRuntimePet(instance: PetInstance, species: PetSpecies): RunTimePet {
     return {
         instanceId: instance.instanceId,
+        nickname: instance.nickname,
         species,
         x: Math.random() * (window.innerWidth - species.width),
         y: window.innerHeight - species.height - 20,

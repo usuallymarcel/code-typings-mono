@@ -1,13 +1,7 @@
 import { createContext, useContext, type ReactNode } from "react"
-import type { LootboxOpenResult, LootboxSummary } from "../models/pet"
 import { useLootboxes } from "../hooks/useLootboxes"
 
-type LootboxContextType = {
-    boxes: LootboxSummary[]
-    open: (sku: string) => Promise<LootboxOpenResult>
-    opening: boolean,
-    refetch: () => Promise<void>
-}
+type LootboxContextType = ReturnType<typeof useLootboxes>
 
 const LootboxContext = createContext<LootboxContextType | null>(null)
 

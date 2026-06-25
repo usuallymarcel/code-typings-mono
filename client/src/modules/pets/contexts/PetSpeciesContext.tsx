@@ -1,13 +1,7 @@
 import { createContext, useContext, type ReactNode } from "react"
-import type { SpeciesEntry } from "../models/pet"
 import { usePetSpecies } from "../hooks/usePetSpecies"
 
-type PetSpeciesContextType = {
-    species: SpeciesEntry[]
-    loading: boolean
-    error: Error | null
-    refetch: () => Promise<void>
-}
+type PetSpeciesContextType = ReturnType<typeof usePetSpecies>
 
 const PetSpeciesContext = createContext<PetSpeciesContextType | null>(null)
 

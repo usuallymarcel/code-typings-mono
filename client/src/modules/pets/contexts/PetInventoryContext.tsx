@@ -5,14 +5,8 @@ import {
 } from 'react'
 
 import { usePetInventory } from '../hooks/usePetInventory'
-import type { PetInstance } from '../models/pet'
 
-type PetInventoryContextType = {
-    inventory: PetInstance[]
-    loading: boolean
-    setActive: (instanceId: string, active: boolean) => Promise<void>
-    refetch: () => Promise<void>
-}
+type PetInventoryContextType = ReturnType<typeof usePetInventory>
 
 const PetInventoryContext = createContext<PetInventoryContextType | null>(null)
 

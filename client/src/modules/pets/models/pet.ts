@@ -2,6 +2,14 @@ export type Rarity = 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary'
 
 export type BehaviorId = string
 
+export interface PetSpecial {
+    id: string
+    name: string
+    description: string
+    tier: number
+    magnitude: number
+}
+
 export interface PetSpecies {
     speciesId: string
     displayName: string
@@ -15,6 +23,9 @@ export interface PetSpecies {
     animations: Record<BehaviorId, AnimationConfig>
     spriteSheets: Record<BehaviorId, string>
     soundCues?: Partial<Record<BehaviorId, string>>
+    baseAttack: number
+    baseHealth: number
+    special: PetSpecial | null
 }
 
 export interface AnimationConfig {
@@ -31,6 +42,8 @@ export interface PetInstance {
     nickname?: string
     unlockedAt: string
     active: boolean
+    level: number
+    xp: number
 }
 
 export interface RunTimePet {

@@ -1,5 +1,7 @@
 import { usePetSpecies } from '../hooks/usePetSpecies'
 import { RARITY_COLOR } from './rarity'
+import { StatChips } from './TeamBuilder'
+import { spriteThumbStyle, spriteThumbUrl } from './spriteThumb'
 import type { Rarity } from '../models/pet'
 import { usePetInventoryContext } from '../contexts/PetInventoryContext'
 
@@ -21,12 +23,18 @@ export function PetInventory() {
             <h2 className="text-lg font-semibold text-center mb-1">Your pets ({inventory.length})</h2>
             <div className="max-h-100 overflow-auto">
             {inventory.map(p => {
-                const rarity: Rarity = meta(p.speciesId)?.rarity ?? 'common'
+                const s = meta(p.speciesId)
+                const rarity: Rarity = s?.rarity ?? 'common'
+                const level = p.xp < 2 ? 1 : p.xp < 5 ? 2 : 3
+                const attack = (s?.baseAttack ?? 0) + p.xp
+                const health = (s?.baseHealth ?? 0) + p.xp
                 return (
-                    <div key={p.instanceId} className="flex items-center justify-between px-3 py-2">
-                        <span className="font-medium" style={{ color: RARITY_COLOR[rarity] }}>
-                            {p.nickname ?? meta(p.speciesId)?.displayName ?? p.speciesId}
+                    <div key={p.instanceId} className="flex items-center justify-between gap-2 px-3 py-2">
+                        <div style={spriteThumbStyle(spriteThumbUrl(s), 32)} />
+                        <span className="font-medium flex-1" style={{ color: RARITY_COLOR[rarity] }}>
+                            {p.nickname ?? s?.displayName ?? p.speciesId}
                         </span>
+                        <StatChips attack={attack} health={health} level={level} />
                         <button
                             onClick={() => setActive(p.instanceId, !p.active)}
                             className={`rounded-lg px-3 py-1 text-sm text-black ${

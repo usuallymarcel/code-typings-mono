@@ -6,6 +6,7 @@ from app.routes import leaderboard
 from app.routes import pets
 from app.routes import lootboxes
 from app.routes import pet_assets
+from app.routes import battle
 
 app = FastAPI()
 
@@ -19,6 +20,7 @@ app.include_router(messages.router)
 app.include_router(pets.router)
 app.include_router(lootboxes.router)
 app.include_router(pet_assets.router)
+app.include_router(battle.router)
 
 origins = [
     'http://localhost:5173',

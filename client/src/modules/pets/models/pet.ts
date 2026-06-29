@@ -31,6 +31,7 @@ export interface PetInstance {
     nickname?: string
     unlockedAt: string
     active: boolean
+    source?: string
 }
 
 export interface RunTimePet {

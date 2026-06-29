@@ -56,7 +56,8 @@ def inventory(request: Request, db = Depends(get_db)):
             "speciesId": s.species_id,
             "nickname": s.nickname,
             "unlockedAt": s.unlocked_at,
-            "active": s.active
+            "active": s.active,
+            "source": s.source
         })
 
     return {"ok": True, "pets": pets}

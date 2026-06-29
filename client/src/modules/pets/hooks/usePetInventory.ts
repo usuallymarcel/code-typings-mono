@@ -5,6 +5,7 @@ import { serverUrl } from "../../../utils/env";
 export function usePetInventory() {
     const [inventory, setInventory] = useState<PetInstance[]>([])
     const [loading, setLoading] = useState(false)
+    const [groups, setGroups] = useState<string[]>([])
 
     const fetchInventory = useCallback(async () => {
         setLoading(true)
@@ -17,7 +18,10 @@ export function usePetInventory() {
             const data = await res.json()
 
             if (data.ok) {
-                setInventory(data.pets)
+		const pets = data.pets as PetInstance[]
+                setInventory(pets)
+		const uniqueGroups = [...new Set(pets.map(pet => pet.source ?? 'misc'))]
+	       	setGroups(uniqueGroups)	
             }
         } finally {
             setLoading(false)
@@ -64,5 +68,5 @@ export function usePetInventory() {
         }
     }, [fetchInventory])
 
-    return { inventory, loading, setActive, refetch: fetchInventory, setNickname }
+    return { inventory, groups, loading, setActive, refetch: fetchInventory, setNickname }
 }

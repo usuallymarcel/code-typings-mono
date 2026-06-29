@@ -5,7 +5,7 @@ import { usePetSpeciesContext } from '../contexts/PetSpeciesContext'
 import { useEffect, useState } from 'react'
 
 export function PetInventory() {
-    const { inventory, setActive, loading, refetch: refetchInventory, setNickname } = usePetInventoryContext()
+    const { inventory, setActive, loading, refetch: refetchInventory, setNickname, groups } = usePetInventoryContext()
     const { species } = usePetSpeciesContext()
     const meta = (id: string) => species.find(s => s.speciesId === id)
 
@@ -13,6 +13,7 @@ export function PetInventory() {
     
     useEffect(() => {
         refetchInventory()
+	console.log(groups)
     }, [refetchInventory])
 
     if (loading && inventory.length === 0) {

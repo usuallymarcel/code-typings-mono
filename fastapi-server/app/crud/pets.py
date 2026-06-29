@@ -2,7 +2,7 @@ from sqlalchemy.orm import Session
 from app.models.pet_instance import Pet_Instance
 
 def list_user_instances(db: Session, user_id: int) -> list[Pet_Instance]:
-    return db.query(Pet_Instance).filter(Pet_Instance.user_id == user_id).all()
+    return db.query(Pet_Instance).filter(Pet_Instance.user_id == user_id).order_by(Pet_Instance.species_id.desc()).all()
 
 def create_instance(db: Session, user_id: int, species_id: str, source: str) -> Pet_Instance:
     instance = Pet_Instance(user_id=user_id,

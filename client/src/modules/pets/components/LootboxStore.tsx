@@ -5,12 +5,19 @@ import { RARITY_COLOR } from './rarity'
 import type { Rarity } from '../models/pet'
 import { usePetSpeciesContext } from '../contexts/PetSpeciesContext'
 import { useLootboxContext } from '../contexts/LootboxContext'
+import { useEffect } from 'react'
 
 export function LootboxStore({ onOpened }: { onOpened?: () => void }) {
-    const { boxes, open, opening } = useLootboxContext()
+    const { boxes, open, opening, refetch: refetchLootboxes } = useLootboxContext()
     const { species } = usePetSpeciesContext()
     const { points, fetchPoints } = usePointsContext()
     const { openModal } = useModal()
+
+    useEffect(() => {
+        if (!boxes || boxes.length < 1) {
+            refetchLootboxes()
+        }
+    }, [boxes])
 
     const handleOpen = async (sku: string) => {
         if (opening) return

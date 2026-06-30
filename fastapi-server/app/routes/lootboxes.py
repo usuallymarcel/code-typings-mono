@@ -49,7 +49,7 @@ def open_box(sku: str, request: Request, db = Depends(get_db)):
         remaining = pts.points - box.price
         update_user_points(db, session.user_id, remaining)
 
-        rarity, species_id, seed_hash = roll(db, session.user_id, box)
+        rarity, species_id = roll(box)
 
         instance = create_instance(db, session.user_id, species_id, source=f"lootbox:{sku}")
 

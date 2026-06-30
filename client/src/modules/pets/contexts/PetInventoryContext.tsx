@@ -30,6 +30,7 @@ export function PetInventoryProvider({
     )
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function usePetInventoryContext() {
     const context = useContext(PetInventoryContext)
 

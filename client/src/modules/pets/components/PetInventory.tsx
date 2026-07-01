@@ -9,11 +9,12 @@ export function PetInventory() {
     const { species } = usePetSpeciesContext()
     const meta = (id: string) => species.find(s => s.speciesId === id)
 
+    const [open, setOpen] = useState<Record<string, boolean>>(() => Object.fromEntries(groups.map(g => [g, true])))
+
     const [nicknames, setNicknames] = useState<Record<string, string>>({})
     
     useEffect(() => {
         refetchInventory()
-	    console.log(groups)
     }, [refetchInventory])
 
     if (loading && inventory.length === 0) {
@@ -28,8 +29,10 @@ export function PetInventory() {
         <div className="flex flex-col p-4 [background:var(--bg)] rounded-xl border w-full">
             <h2 className="text-lg font-semibold text-center mb-1">Your pets ({inventory.length})</h2>
             <div className="max-h-100 overflow-auto">
-            {inventory.map(p => {
-                const rarity: Rarity = meta(p.speciesId)?.rarity ?? 'common'
+            {groups.map(g => {
+                return <div key={g}>
+                    <p className="cursor-pointer" onClick={() => {setOpen(prev => ({...prev, [g]: !prev[g]}))}}>{g} {open[g] === true ? '⌄' : '>'}</p>
+                    {open[g] === true && inventory.filter(i => i.source === g).map(p => {const rarity: Rarity = meta(p.speciesId)?.rarity ?? 'common'
                 return (
                     <div key={p.instanceId} className="flex items-center justify-between px-3 py-2">
                         <div className='flex flex-col'>
@@ -71,7 +74,8 @@ export function PetInventory() {
                             {p.active ? 'On screen' : 'Summon'}
                         </button>
                     </div>
-                )
+                )})}</div>
+                
             })}
             </div>
         </div>

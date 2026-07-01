@@ -8,7 +8,6 @@ export function usePetEngine() {
     useEffect(() => {
         engine.start()
 
-        return () => engine.stop()
     }, [])
 
     return engine

@@ -13,7 +13,7 @@ export function PetInventory() {
     
     useEffect(() => {
         refetchInventory()
-	console.log(groups)
+	    console.log(groups)
     }, [refetchInventory])
 
     if (loading && inventory.length === 0) {

@@ -9,7 +9,7 @@ export function PetInventory() {
     const { species } = usePetSpeciesContext()
     const meta = (id: string) => species.find(s => s.speciesId === id)
 
-    const [open, setOpen] = useState<Record<string, boolean>>(() => Object.fromEntries(groups.map(g => [g, true])))
+    const [open, setOpen] = useState<Record<string, boolean>>(() => Object.fromEntries(groups.map(g => [g, false])))
 
     const [nicknames, setNicknames] = useState<Record<string, string>>({})
     

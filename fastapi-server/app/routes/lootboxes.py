@@ -51,7 +51,7 @@ def open_box(sku: str, request: Request, db = Depends(get_db)):
 
         rarity, species_id = roll(box)
 
-        instance = create_instance(db, session.user_id, species_id, source=f"lootbox:{sku}")
+        instance = create_instance(db, session.user_id, species_id, source=box.name)
 
         db.add(LootboxOpen(
             user_id=session.user_id,

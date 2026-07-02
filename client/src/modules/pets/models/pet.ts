@@ -8,6 +8,9 @@ export interface PetSpecies {
     rarity: Rarity
     width: number
     height: number
+    baseAttack: number
+    baseHealth: number
+    special: { description: string, id: string, magnitude: number, name: string, tier: number } | null
     hitboxInset?: { x: number, y: number }
     defaultSpeed: number
     behaviorBag: BehaviorId[]

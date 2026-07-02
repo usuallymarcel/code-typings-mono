@@ -17,7 +17,7 @@ export function LootboxStore({ onOpened }: { onOpened?: () => void }) {
         if (!boxes || boxes.length < 1) {
             refetchLootboxes()
         }
-    }, [boxes])
+    }, [boxes, refetchLootboxes])
 
     const handleOpen = async (sku: string) => {
         if (opening) return

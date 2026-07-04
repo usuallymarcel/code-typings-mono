@@ -360,7 +360,10 @@ const displayTypeText = () => {
 
             <div className="gap-5 justify-center my-5">
                 <div className='flex flex-wrap gap-5 justify-center'>
-                {/* <OutlineButton onClick={reset}>Reset</OutlineButton> */}
+                <OutlineButton onClick={() => {
+                    reset()
+                    setTextReloadTrigger(prev => prev + 1)
+                    }}>Reset</OutlineButton>
                 <OutlineButton onClick={() => setJuice(prev => !prev)}>
                     juice: <span className="inline-block w-8 text-center">{juice ? "ON" : "OFF"}</span>
                 </OutlineButton>

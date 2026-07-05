@@ -22,3 +22,5 @@ class Pet_Instance(Base):
     active: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0")
 
     source: Mapped[str] = mapped_column(String(32), nullable=True) #e.g lootbox
+
+    level: Mapped[int] = mapped_column(Integer, nullable=False, default=1, server_default="1")

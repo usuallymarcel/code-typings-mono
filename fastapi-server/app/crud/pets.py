@@ -33,3 +33,19 @@ def set_nickname(db: Session, uid: int, instance_id: str, nickname: str):
 
 def get_pet_instance(db: Session, uid: int, instance_id: str):
     return db.query(Pet_Instance).filter(Pet_Instance.user_id == uid, Pet_Instance.instance_id == instance_id).first()
+
+def merge_instances(db: Session, user_id: int, target_id: str, sacrifice_id: str) -> Pet_Instance | None:
+    target = get_pet_instance(db, user_id, target_id)
+    sacrifice = get_pet_instance(db, user_id, sacrifice_id)
+
+    if target is None or sacrifice is None:
+        return None
+    
+    target.level = target.level + 1
+
+    db.delete(sacrifice)
+    db.add(target)
+    db.flush()
+    db.refresh(target)
+
+    return target

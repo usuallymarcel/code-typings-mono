@@ -1,15 +1,17 @@
 from app.database import Base
-from sqlalchemy.orm import Mapped, mapped_column
-from sqlalchemy import JSON, DateTime, ForeignKey, Integer, func
+from sqlalchemy.orm import Mapped, mapped_column, Unique, relationship
+from sqlalchemy import DateTime, ForeignKey, Integer, func, String, UniqueConstraint
 
-class Battle_Profile(Base):
-    __tablename__ = "battle_profiles"
+class Battle_Team(Base):
+    __tablename__ = "battle_teams"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
 
     user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False,
         index=True)
+    
+    name: Mapped[str] = mapped_column(String(64), nullable=False)
 
     trophies: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
 
@@ -21,10 +23,19 @@ class Battle_Profile(Base):
     
     best_streak: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
 
-    team: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
-
     updated_at: Mapped["DateTime"] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),
         onupdate=func.now()
+    )
+
+    __table_args__ = (
+        UniqueConstraint("user_id", "name")
+    )
+
+    members = relationship(
+        "Battle_Team_Member",
+        back_populates="team",
+        cascade="all, delete-orphan",
+        order_by="Battle_Team_Member.slot"
     )

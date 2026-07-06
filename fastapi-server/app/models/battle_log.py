@@ -10,6 +10,8 @@ class Battle_Log(Base):
 
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
 
+    team_id: Mapped[int] = mapped_column(ForeignKey("battle_teams.id", ondelete="CASCADE"), index=True)
+
     result: Mapped[str] = mapped_column(String(8))
 
     reward: Mapped[int] = mapped_column(Integer)

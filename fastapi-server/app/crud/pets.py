@@ -23,16 +23,16 @@ def set_active(db: Session, user_id: int, instance_id: str, active: bool):
     db.refresh(instance)
     return instance 
 
-def set_nickname(db: Session, uid: int, instance_id: str, nickname: str):
-    instance = db.query(Pet_Instance).filter(Pet_Instance.user_id == uid, Pet_Instance.instance_id == instance_id).first()
+def set_nickname(db: Session, user_id: int, instance_id: str, nickname: str):
+    instance = db.query(Pet_Instance).filter(Pet_Instance.user_id == user_id, Pet_Instance.instance_id == instance_id).first()
 
     instance.nickname = nickname
     db.commit()
     db.refresh(instance)
     return instance
 
-def get_pet_instance(db: Session, uid: int, instance_id: str):
-    return db.query(Pet_Instance).filter(Pet_Instance.user_id == uid, Pet_Instance.instance_id == instance_id).first()
+def get_pet_instance(db: Session, user_id: int, instance_id: str):
+    return db.query(Pet_Instance).filter(Pet_Instance.user_id == user_id, Pet_Instance.instance_id == instance_id).first()
 
 def merge_instances(db: Session, user_id: int, target_id: str, sacrifice_id: str) -> Pet_Instance | None:
     target = get_pet_instance(db, user_id, target_id)
@@ -47,5 +47,20 @@ def merge_instances(db: Session, user_id: int, target_id: str, sacrifice_id: str
     db.add(target)
     db.flush()
     db.refresh(target)
+
+    return target
+
+def merge_pets(db: Session, user_id: int, target_id: str, sacrifices: list[str]) -> Pet_Instance | None:
+    target = get_pet_instance(db, user_id, target_id)
+
+    if not target:
+        return None
+
+    db.query(Pet_Instance).filter(Pet_Instance.user_id == user_id, Pet_Instance.instance_id.in_(sacrifices)).delete(synchronize_session=False)
+
+    target.level += 1
+
+    db.add(target)
+    db.flush()
 
     return target

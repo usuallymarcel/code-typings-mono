@@ -3,9 +3,10 @@ from pydantic import BaseModel
 from app.database import get_db
 from fastapi import APIRouter, Depends, HTTPException, Request
 from app.utils.session_tokens import get_session_from_request
-from app.crud.pets import get_pet_instance, list_user_instances, set_active, set_nickname
+from app.crud.pets import get_pet_instance, list_user_instances, merge_pets, set_active, set_nickname
 from app.crud.pet_species import get_pet_species
 from app.utils.pet_assets import sign_sprite_url
+from app.crud.pet_instance import get_pet_instance_by_id, get_pet_instances
 
 router = APIRouter(prefix="/pets", tags=["pets"])
 
@@ -91,3 +92,64 @@ def set_pet_nickname(instance_id: str, body: SetNicknameBody, request: Request, 
     instance = set_nickname(db, session.user_id, instance_id, body.nickname)
 
     return {"ok": True, "instance":instance}
+
+class MergeRequestBody(BaseModel):
+    target_id: str
+    sacrifices: list[str]
+
+@router.post("/merge")
+def merge_pets_req(body: MergeRequestBody, request: Request, db = Depends(get_db)):
+    session = get_session_from_request(db, request)
+
+    target = get_pet_instance_by_id(db, session.user_id, body.target_id)
+
+
+    if not target:
+        raise HTTPException(404, "target not found")
+    
+    if body.target_id in body.sacrifices:
+        raise HTTPException(400, "connot merge pet into itself")
+    
+    sacrifices_needed = min(target.level * 3, 5)
+
+    if len(body.sacrifices) != sacrifices_needed:
+        raise HTTPException(400, "wrong amount of sacrifices")
+
+    sacrifices = get_pet_instances(db, session.user_id, body.sacrifices)
+
+    sacrifice_map = {s.instance_id: s for s in sacrifices}
+
+    seen: set[str] = set()
+
+    for id in body.sacrifices:
+        s = sacrifice_map.get(id)
+
+        if not s:
+            raise HTTPException(404, f"sacrifice {id} not found")
+        
+        if s in seen:
+            raise HTTPException(400, "duplicates in your sacrifices")
+        
+        if s.species_id != target.species_id:
+            raise HTTPException(400, f"target and sacrifice {id} are different species")
+        
+        seen.add(id)
+
+    try:
+        updated = merge_pets(db, session.user_id, body.target_id, body.sacrifices)
+        db.commit()
+        db.refresh(updated)
+    except HTTPException:
+        db.rollback(); raise
+    except Exception:
+        db.rollback()
+        raise HTTPException(500, "could not merge pets")
+    
+    return {
+        "ok": True,
+        "target": updated
+    }
+    
+
+    
+

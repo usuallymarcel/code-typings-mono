@@ -89,7 +89,7 @@ def set_team(body: TeamRequestBody, request: Request, db: Session = Depends(get_
     }
 
 @router.post("/fight/{team_id}")
-def fight(team_id: str, request: Request, db: Session = Depends(get_db)):
+def fight(team_id: int, request: Request, db: Session = Depends(get_db)):
     session = get_session_from_request(db, request)
 
     team = get_team_by_id(db, session.user_id, team_id)

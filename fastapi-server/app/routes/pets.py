@@ -58,7 +58,8 @@ def inventory(request: Request, db = Depends(get_db)):
             "nickname": s.nickname,
             "unlockedAt": s.unlocked_at,
             "active": s.active,
-            "source": s.source
+            "source": s.source,
+            "level": s.level
         })
 
     return {"ok": True, "pets": pets}
@@ -144,10 +145,15 @@ def merge_pets_req(body: MergeRequestBody, request: Request, db = Depends(get_db
     except Exception:
         db.rollback()
         raise HTTPException(500, "could not merge pets")
-    
+
     return {
         "ok": True,
-        "target": updated
+        "target": {
+            "instanceId": updated.instance_id,
+            "speciesId": updated.species_id,
+            "nickname": updated.nickname,
+            "level": updated.level,
+        }
     }
     
 

@@ -12,9 +12,31 @@ from app.crud.pet_species import get_pet_species
 from app.utils.battle_enemy import build_enemy_team, reward_for
 from app.crud.user_points import get_points_by_user_id, update_user_points
 from app.models.battle_log import Battle_Log
+from app.models.battle_team import Battle_Team
 from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/battle", tags=["battle"])
+
+def serialize_team(team: Battle_Team) -> dict[str, object]:
+    return {
+        "id": team.id,
+        "name": team.name,
+        "trophies": team.trophies,
+        "wins": team.wins,
+        "losses": team.losses,
+        "streak": team.streak,
+        "bestStreak": team.best_streak,
+        "members": [
+            {
+                "instanceId": m.pet_instance.instance_id,
+                "speciesId": m.pet_instance.species_id,
+                "nickname": m.pet_instance.nickname,
+                "level": m.pet_instance.level,
+                "slot": m.slot,
+            }
+            for m in team.members
+        ],
+    }
 
 @router.get("/teams")
 def get_profile(request: Request, db: Session = Depends(get_db)):
@@ -24,7 +46,7 @@ def get_profile(request: Request, db: Session = Depends(get_db)):
 
     return {
         "ok": True,
-        "teams": teams
+        "teams": [serialize_team(t) for t in teams]
     }
 
 class TeamRequestBody(BaseModel):
@@ -63,7 +85,7 @@ def set_team(body: TeamRequestBody, request: Request, db: Session = Depends(get_
 
     return {
         "ok": True,
-        "teams": teams
+        "teams": [serialize_team(t) for t in teams]
     }
 
 @router.post("/fight/{team_id}")

@@ -1,5 +1,5 @@
 from app.database import Base
-from sqlalchemy.orm import Mapped, mapped_column, Unique, relationship
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy import DateTime, ForeignKey, Integer, func, String, UniqueConstraint
 from app.models.battle_team_member import Battle_Team_Member
 
@@ -31,7 +31,7 @@ class Battle_Team(Base):
     )
 
     __table_args__ = (
-        UniqueConstraint("user_id", "name")
+        UniqueConstraint("user_id", "name"),
     )
 
     members: Mapped[list[Battle_Team_Member]] = relationship(

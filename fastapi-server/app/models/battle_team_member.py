@@ -1,6 +1,7 @@
 from app.database import Base
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy import DateTime, ForeignKey, Index, Integer, func, UniqueConstraint
+from app.models.pet_instance import Pet_Instance 
 
 class Battle_Team_Member(Base):
     __tablename__ = "battle_team_members"
@@ -20,7 +21,7 @@ class Battle_Team_Member(Base):
     )
 
     team = relationship("Battle_Team", back_populates="members")
-    pet_instance = relationship("Pet_Instance")
+    pet_instance: Mapped[Pet_Instance] = relationship("Pet_Instance")
 
     __table_args__ = (
         UniqueConstraint("team_id", "slot"),

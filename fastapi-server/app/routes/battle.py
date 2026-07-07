@@ -7,7 +7,7 @@ from app.database import get_db
 from app.utils.session_tokens import get_session_from_request
 from app.crud.battle import get_team_by_id, get_user_teams, record_battle_result, save_team
 from app.crud.pets import list_user_instances
-from app.utils.battle_engine import build_battle_pet, make_rng, simulate
+from app.utils.battle_engine import BattlePet, build_battle_pet, make_rng, simulate
 from app.crud.pet_species import get_pet_species
 from app.utils.battle_enemy import build_enemy_team, reward_for
 from app.crud.user_points import get_points_by_user_id, update_user_points
@@ -84,7 +84,13 @@ def fight(team_id: str, request: Request, db: Session = Depends(get_db)):
         seed_hash = hashlib.sha256(seed).hexdigest()
         rng = make_rng(seed)
 
-        player_line = [build_battle_pet(member.pet_instance, species_by_id[member.pet_instance.species_id]) for member in team.members]
+        player_line: list[BattlePet] = []
+        for member in team.members:
+            instance = member.pet_instance
+            species = species_by_id.get(instance.species_id)
+            if species is None:
+                raise HTTPException(409, "team contains an unavailable pet")
+            player_line.append(build_battle_pet(instance, species))
 
         enemy_line = build_enemy_team(tier, rng, list(species_by_id.values()))
 
@@ -94,15 +100,17 @@ def fight(team_id: str, request: Request, db: Session = Depends(get_db)):
         enemy_start = start_ev["enemy"]
         result = events[-1]["result"]
 
+        pts = get_points_by_user_id(db, session.user_id)
+
         record_battle_result(team, result)
         reward = reward_for(result, tier, team.streak)
 
-        pts = get_points_by_user_id(db, session.user_id)
         points_remaining = pts.points + reward
         update_user_points(db, session.user_id, points_remaining)
 
         db.add(Battle_Log(
             user_id=session.user_id,
+            team_id=team.id,
             result=result,
             reward=reward,
             trophies_after=team.trophies,

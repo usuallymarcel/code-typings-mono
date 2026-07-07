@@ -1,6 +1,7 @@
 from app.database import Base
 from sqlalchemy.orm import Mapped, mapped_column, Unique, relationship
 from sqlalchemy import DateTime, ForeignKey, Integer, func, String, UniqueConstraint
+from app.models.battle_team_member import Battle_Team_Member
 
 class Battle_Team(Base):
     __tablename__ = "battle_teams"
@@ -33,7 +34,7 @@ class Battle_Team(Base):
         UniqueConstraint("user_id", "name")
     )
 
-    members = relationship(
+    members: Mapped[list[Battle_Team_Member]] = relationship(
         "Battle_Team_Member",
         back_populates="team",
         cascade="all, delete-orphan",

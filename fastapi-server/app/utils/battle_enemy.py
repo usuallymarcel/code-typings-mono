@@ -42,10 +42,10 @@ def build_enemy_team(tier: int, rng: random.Random, all_species: list[Pet_Specie
     for _ in range(size):
         rarity = _weighted_pick_rarity(rng, weights)
 
-        pool = by_rarity.get(rarity)
+        pool = by_rarity.get(rarity) or all_species
 
         if not pool:
-            raise ValueError(f"no species for rarity {rarity}")
+            raise ValueError("no enabled species available to build enemy team")
 
         species = pool[rng.randrange(len(pool))]
 
@@ -75,5 +75,5 @@ def reward_for(result: str, tier: int, streak_after: int) -> int:
     if result == "win":
         return 30 * (tier * 5) + (streak_after * 5) * 10
     if result == "draw":
-        return (30 * (tier * 5) + (streak_after * 5) * 10) / 2
+        return (30 * (tier * 5) + (streak_after * 5) * 10) // 2
     return 0

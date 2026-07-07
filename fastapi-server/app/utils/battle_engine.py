@@ -100,12 +100,12 @@ class BattlePet:
     flags: dict[str, bool] = field(default_factory=dict)
 
     @property
-    def revivied_used(self) -> bool:
+    def revived_used(self) -> bool:
         return self.flags.get("revived_used", False)
     
-    @revivied_used.setter
+    @revived_used.setter
     def revived_used(self, value: bool) -> None:
-        self.flags["revivied_used"] = value
+        self.flags["revived_used"] = value
 
 def snapshot(pet: BattlePet) -> PetSnapshot:
 
@@ -138,12 +138,13 @@ def _resolve_special(config: dict[str, object], level: int) -> SpecialResolution
     
     magnitude = int(magnitude) * level
     
-    return {
-        "id": id,
-        "name": name,
-        "description": description,
-        "magnitude": magnitude
-    }
+    return SpecialResolution(
+        id=id,
+        name=name,
+        description=description,
+        magnitude=magnitude
+
+    )
 
 def build_battle_pet(instance: Pet_Instance, species: Pet_Species) -> BattlePet:
     level = instance.level
@@ -196,12 +197,18 @@ def _trigger_order(
 def simulate(player_pets: list[BattlePet], enemy_pets: list[BattlePet], rng: random.Random) -> list[BattleEvent]:
     from app.utils.battle_abilities import ABILITY, AbilityCtx
 
+    def ability_entry(pet: BattlePet):
+        sp = pet.special
+        if sp is None:
+            return None
+        return ABILITY.get(sp.id)
+
     events: list[BattleEvent] = []
 
     events.append({
         "type": "start",
         "player": [snapshot(p) for p in player_pets],
-        "enemy": [snapshot()]
+        "enemy": [snapshot(p) for p in enemy_pets]
     })
 
     def run_ability(pet: BattlePet, side: str) -> None:
@@ -209,7 +216,7 @@ def simulate(player_pets: list[BattlePet], enemy_pets: list[BattlePet], rng: ran
         if special is None:
             return
         
-        entry = ABILITY.get(special["id"])
+        entry = ABILITY.get(special.id)
 
         if entry is None:
             return
@@ -261,7 +268,8 @@ def simulate(player_pets: list[BattlePet], enemy_pets: list[BattlePet], rng: ran
                         idx += 1
                         continue
                     
-                    if ABILITY.get(pet.special.id).trigger == "on_faint":
+                    entry = ability_entry(pet)
+                    if entry is not None and entry.trigger == "on_faint":
                         run_ability(pet, side)
 
                     if pet in line and pet.health > 0:
@@ -279,7 +287,8 @@ def simulate(player_pets: list[BattlePet], enemy_pets: list[BattlePet], rng: ran
                         progressed = True
     
     for pet, side in _trigger_order(player_pets, enemy_pets):
-        if ABILITY.get(pet.special.id).trigger == "start_of_battle":
+        entry = ability_entry(pet)
+        if entry is not None and entry.trigger == "start_of_battle":
             run_ability(pet, side)
 
     resolve_faints()
@@ -293,7 +302,8 @@ def simulate(player_pets: list[BattlePet], enemy_pets: list[BattlePet], rng: ran
         ef = enemy_pets[0]
 
         for pet, side in _trigger_order([pf], [ef]):
-            if ABILITY.get(pet.special.id).trigger == "before_attack":
+            entry = ability_entry(pet)
+            if entry is not None and entry.trigger == "before_attack":
                 run_ability(pet, side)
 
         resolve_faints()
@@ -302,21 +312,22 @@ def simulate(player_pets: list[BattlePet], enemy_pets: list[BattlePet], rng: ran
             break
 
         pf = player_pets[0]
-        ef = player_pets[0]
+        ef = enemy_pets[0]
 
-        player_damage = ef.attack
-        enemy_damage = pf.attack
+        player_damage = pf.attack
+        enemy_damage = ef.attack
 
-        pf.health -= player_damage
-        ef.health -= enemy_damage
+        ef.health -= player_damage
+        pf.health -= enemy_damage
 
         hurt: list[tuple[BattlePet, Side]] = []
-        if player_damage > 0 and pf.health > 0:
+        if enemy_damage > 0 and pf.health > 0:
             hurt.append((pf, "player"))
-        if enemy_damage > 0 and ef.health > 0:
+        if player_damage > 0 and ef.health > 0:
             hurt.append((ef, "enemy"))
         for pet, side in sorted(hurt, key=lambda h: (-h[0].attack, 0 if h[1] == "player" else 1)):
-            if ABILITY.get(pet.special.id).trigger == "on_hurt":
+            entry = ability_entry(pet)
+            if entry is not None and entry.trigger == "on_hurt":
                 run_ability(pet, side)
 
         events.append({

@@ -2,27 +2,22 @@
 import math
 import random
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Literal, Callable
 
-from app.utils.battle_engine import BattlePet, snapshot
+from app.utils.battle_engine import BattlePet, StatChangeEffect, snapshot
 
+Effect = StatChangeEffect
 
-# ---------------------------------------------------------------------------
-# AbilityCtx: the only thing an ability is allowed to touch.
-# ---------------------------------------------------------------------------
-# Gives the ability both lines, the acting pet + its side, the seeded rng, an
-# Effect collector, an optional note, and a summon queue (summon events the
-# engine flushes right after the ability event). NO DB access.
 @dataclass
 class AbilityCtx:
     player: list[BattlePet]
     enemy: list[BattlePet]
     pet: BattlePet
-    side: str
+    side: Literal["player", "enemy"]
     source_index: int
     rng: random.Random
     note: str | None = None
-    summons: list[dict[str, Any]] = field(default_factory=list)
+    # summons: list[dict[str, Any]] = field(default_factory=list)
 
     # --- line helpers --------------------------------------------------
     def own_line(self) -> list[BattlePet]:
@@ -31,26 +26,34 @@ class AbilityCtx:
     def enemy_line(self) -> list[BattlePet]:
         return self.enemy if self.side == "player" else self.player
 
-    def enemy_side(self) -> str:
+    def enemy_side(self) -> Literal["player", "enemy"]:
         return "enemy" if self.side == "player" else "player"
 
     def magnitude(self) -> int:
-        # Effective magnitude = base magnitude * level.
-        return int(self.pet.special["magnitude"]) * self.pet.level
+        if self.pet.special is None:
+            return 0
+        return self.pet.special.magnitude
 
-    # --- Effect builders (index is read LIVE by the caller) ------------
     def effect(
-        self, side: str, index: int, d_health: int = 0, d_attack: int = 0
-    ) -> dict[str, Any]:
-        eff: dict[str, Any] = {"side": side, "index": index}
+        self,
+        side: Literal["player", "enemy"],
+        index: int,
+        d_health: int = 0,
+        d_attack: int = 0,
+    ) -> StatChangeEffect:
+        effect: StatChangeEffect = {
+            "type": "stat_change",
+            "side": side,
+            "index": index,
+        }
+
         if d_health:
-            eff["dHealth"] = d_health
+            effect["dHealth"] = d_health
+
         if d_attack:
-            eff["dAttack"] = d_attack
-        return eff
+            effect["dAttack"] = d_attack
 
-
-Effect = dict[str, Any]
+        return effect
 
 
 # ---------------------------------------------------------------------------
@@ -238,20 +241,30 @@ def _guard_stance(ctx: AbilityCtx) -> list[Effect]:
     front.max_health += m
     return [ctx.effect(ctx.side, 0, d_health=m)]
 
+Trigger = Literal[
+    "start_of_battle",
+    "on_faint",
+    "on_hurt",
+    "before_attack",
+]
 
+
+@dataclass(frozen=True)
+class AbilityEntry:
+    trigger: Trigger
+    apply: Callable[[AbilityCtx], list[Effect]]
 # ---------------------------------------------------------------------------
 # Registry keyed by ability id. trigger must match the SPEC catalog exactly.
 # This registry is the SOLE source of an ability's trigger — config does NOT
 # carry `trigger`; the engine looks it up here by id (see _trigger_of).
 # ---------------------------------------------------------------------------
-ABILITY: dict[str, dict[str, Any]] = {
-    "pep_talk": {"trigger": "start_of_battle", "apply": _pep_talk},
-    "splash_damage": {"trigger": "on_faint", "apply": _splash_damage},
-    "adrenaline": {"trigger": "on_hurt", "apply": _adrenaline},
-    "snipe": {"trigger": "start_of_battle", "apply": _snipe},
-    "recoil_blast": {"trigger": "before_attack", "apply": _recoil_blast},
-    # "summon_token": {"trigger": "on_faint", "apply": _summon_token},
-    "jackpot": {"trigger": "start_of_battle", "apply": _jackpot},
-    "second_wind": {"trigger": "on_faint", "apply": _second_wind},
-    "guard_stance": {"trigger": "start_of_battle", "apply": _guard_stance},
+ABILITY: dict[str, AbilityEntry] = {
+    "pep_talk": AbilityEntry("start_of_battle", _pep_talk),
+    "splash_damage": AbilityEntry("on_faint", _splash_damage),
+    "adrenaline": AbilityEntry("on_hurt", _adrenaline),
+    "snipe": AbilityEntry("start_of_battle", _snipe),
+    "recoil_blast": AbilityEntry("before_attack", _recoil_blast),
+    "jackpot": AbilityEntry("start_of_battle", _jackpot),
+    "second_wind": AbilityEntry("on_faint", _second_wind),
+    "guard_stance": AbilityEntry("start_of_battle", _guard_stance),
 }

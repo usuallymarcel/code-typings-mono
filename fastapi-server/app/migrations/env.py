@@ -19,6 +19,9 @@ from app.models.pet_instance import Pet_Instance
 from app.models.pet_species import Pet_Species
 from app.models.lootbox import Lootbox
 from app.models.lootbox_open import LootboxOpen
+from app.models.battle_log import Battle_Log
+from app.models.battle_team import Battle_Team
+from app.models.battle_team_member import Battle_Team_Member
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

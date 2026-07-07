@@ -12,11 +12,12 @@ from app.crud.pet_species import get_pet_species
 from app.utils.battle_enemy import build_enemy_team, reward_for
 from app.crud.user_points import get_points_by_user_id, update_user_points
 from app.models.battle_log import Battle_Log
+from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/battle", tags=["battle"])
 
 @router.get("/teams")
-def get_profile(request: Request, db = Depends(get_db)):
+def get_profile(request: Request, db: Session = Depends(get_db)):
     session = get_session_from_request(db, request)
 
     teams = get_user_teams(db, session.user_id)
@@ -31,7 +32,7 @@ class TeamRequestBody(BaseModel):
     name: str
 
 @router.post("/team")
-def set_team(body: TeamRequestBody, request: Request, db = Depends(get_db)):
+def set_team(body: TeamRequestBody, request: Request, db: Session = Depends(get_db)):
     session = get_session_from_request(db, request)
 
     if len(body.team) > 5 or len(body.team) < 5:
@@ -66,7 +67,7 @@ def set_team(body: TeamRequestBody, request: Request, db = Depends(get_db)):
     }
 
 @router.post("/fight/{team_id}")
-def fight(team_id: str, request: Request, db = Depends(get_db)):
+def fight(team_id: str, request: Request, db: Session = Depends(get_db)):
     session = get_session_from_request(db, request)
 
     team = get_team_by_id(db, session.user_id, team_id)

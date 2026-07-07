@@ -1,12 +1,10 @@
 
 
-import random
-
 from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel, Field
 
 from app.classes.blackjack import BlackjackEngine
-from app.crud.blackjack import create_game, delete_game_by_user_id, get_game_by_user_id, save_game
+from app.crud.blackjack import create_game, delete_game_by_user_id, get_game_by_user_id
 from app.crud.user_points import get_points_by_user_id, update_user_points
 from app.database import get_db
 from app.models.blackjack import Blackjack, GameResult, GameStatus

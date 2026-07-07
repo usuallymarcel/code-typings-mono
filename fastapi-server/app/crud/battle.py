@@ -27,7 +27,7 @@ def get_team_by_id(db: Session, user_id: int, team_id: int):
     return db.query(Battle_Team).filter(Battle_Team.user_id == user_id, Battle_Team.id == team_id).options(selectinload(Battle_Team.members).selectinload(Battle_Team_Member.pet_instance)).first()
 
 def get_team_members(db: Session, team_id: int) -> list[Battle_Team_Member]:
-    return db.query(Battle_Team_Member).filter(Battle_Team_Member.id == team_id).all()
+    return db.query(Battle_Team_Member).filter(Battle_Team_Member.team_id == team_id).all()
 
 def get_user_teams(db: Session, user_id: int):
     return (db.query(Battle_Team).filter(Battle_Team.user_id == user_id).options(selectinload(Battle_Team.members).selectinload(Battle_Team_Member.pet_instance)).all())
@@ -35,7 +35,7 @@ def get_user_teams(db: Session, user_id: int):
 def save_team(db: Session, user_id: int, name: str, instance_ids: list[str]) -> Battle_Team:
     team = get_or_create_team(db, user_id, name)
 
-    db.query(Battle_Team_Member).filter(Battle_Team_Member.id == team.id).delete()
+    db.query(Battle_Team_Member).filter(Battle_Team_Member.team_id == team.id).delete()
 
     for slot, instance_id in enumerate(instance_ids):
         db.add(Battle_Team_Member(

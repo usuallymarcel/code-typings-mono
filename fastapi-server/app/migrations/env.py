@@ -22,6 +22,7 @@ from app.models.lootbox_open import LootboxOpen
 from app.models.battle_log import Battle_Log
 from app.models.battle_team import Battle_Team
 from app.models.battle_team_member import Battle_Team_Member
+from app.models.battle_profile import Battle_Profile
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

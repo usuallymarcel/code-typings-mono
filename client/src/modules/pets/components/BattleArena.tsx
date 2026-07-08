@@ -5,7 +5,7 @@ import { PetPortrait, type Flyout } from './PetPortrait'
 import styles from './battle.module.css'
 
 const SCALE = 0.8
-const T = { start: 550, ability: 820, effect: 860, clash: 720, faint: 420, gap: 130 }
+const T = { start: 550, ability: 620, effect: 660, clash: 720, faint: 420, gap: 130 }
 
 type ArenaPet = {
     uid: string
@@ -71,6 +71,8 @@ export function BattleArena({
     const [model, setModel] = useState<Model>(() => buildModel(result))
     const [clashing, setClashing] = useState(false)
     const [banner, setBanner] = useState<BattleResult | null>(null)
+
+    const newHighest = result.trophiesAfter > result.hightestTrophies
 
     useEffect(() => {
         let cancelled = false
@@ -191,16 +193,16 @@ export function BattleArena({
 
     return (
         <div className="flex flex-col items-center gap-3 p-5 [background:var(--bg)] rounded-xl border w-full">
-            <div className="flex items-center gap-10 text-sm">
+            {!banner && <div className="flex items-center gap-10 text-sm">
                 <span className="text-sky-400 font-semibold">You</span>
                 {/* <span className="opacity-50">·🏆 {result.trophiesAfter} · 🔥 {result.streakAfter}</span> */}
                 <span className="text-rose-400 font-semibold ml-1">Foe</span>
-            </div>
+            </div>}
 
             <div className={`w-full overflow-x-auto ${clashing ? styles.hitShake : ''}`}>
                 <div className="flex items-end gap-3 min-h-37.5 px-2">
                     {renderSide(model.player, 'player')}
-                    <span className="self-center text-lg font-black opacity-40 shrink-0">VS</span>
+                    {!banner && <span className="self-center text-lg font-black opacity-40 shrink-0">VS</span>}
                     {renderSide(model.enemy, 'enemy')}
                 </div>
             </div>
@@ -210,10 +212,13 @@ export function BattleArena({
                     <span className="text-4xl font-black tracking-wider" style={{ color: RESULT_COPY[banner].color }}>
                         {RESULT_COPY[banner].title}
                     </span>
-                    <span className="text-sm opacity-70">{RESULT_COPY[banner].sub}</span>
-                    <span className="text-lg font-bold mt-1">
-                        {result.reward > 0 ? `+${result.reward} points` : 'No points'}
+                    {/* <span className="text-sm opacity-70">{RESULT_COPY[banner].sub}</span> */}
+                    <span className="text-sm opacity-70">
+                        {!newHighest ? `Not good enough for points. Current tier: ${result.trophiesAfter}, Highest: ${result.hightestTrophies}` : 'New highest tier'}
                     </span>
+                    {newHighest && <span className="text-lg font-bold mt-1">
+                        {result.reward > 0 ? `+${result.reward} points` : 'No points'}
+                    </span>}
                     <div className="flex gap-2 mt-2">
                         {canRematch && (
                             <button onClick={onRematch} className="rounded-xl px-4 py-1 bg-green-600 hover:bg-green-800 text-white">

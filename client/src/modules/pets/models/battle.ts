@@ -61,6 +61,7 @@ export interface FightResult {
     result: BattleResult
     reward: number
     trophiesAfter: number
+    hightestTrophies: number
     streakAfter: number
     pointsRemaining: number
     playerTeam: PetSnapshot[]

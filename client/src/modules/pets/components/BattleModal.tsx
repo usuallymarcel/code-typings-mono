@@ -79,7 +79,7 @@ export function BattleModal() {
 
     // ---- hub --------------------------------------------------------------
     return (
-        <div className="w-[560px] max-w-full flex flex-col gap-3 p-5 [background:var(--bg)] rounded-xl border">
+        <div className="w-140 max-w-full flex flex-col gap-3 p-5 [background:var(--bg)] rounded-xl border">
             <div className="flex items-center justify-between">
                 <h2 className="text-lg font-semibold">⚔️ Battles</h2>
                 <div className="flex gap-2">
@@ -93,7 +93,7 @@ export function BattleModal() {
             {loading && teams.length === 0 ? (
                 <p className="opacity-60 py-6 text-center">Loading…</p>
             ) : teams.length === 0 ? (
-                <p className="opacity-60 py-6 text-center">No teams yet. Build one, then throw it at a stranger for points.</p>
+                <p className="opacity-60 py-6 text-center">No teams yet. Build one.</p>
             ) : (
                 <div className="flex flex-col gap-3 max-h-[60vh] overflow-y-auto pr-1">
                     {teams.map(team => (

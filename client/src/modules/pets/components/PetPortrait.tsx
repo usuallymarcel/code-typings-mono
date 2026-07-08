@@ -87,7 +87,7 @@ export function PetPortrait({
                 )}
 
                 {level != null && level > 1 && (
-                    <span className="absolute -top-1 -left-1 z-[6] rounded-full bg-amber-500 text-black text-[9px] font-bold px-1 leading-tight">
+                    <span className="absolute -top-1 -left-1 z-6 rounded-full bg-amber-500 text-black text-[9px] font-bold px-1 leading-tight">
                         L{level}
                     </span>
                 )}

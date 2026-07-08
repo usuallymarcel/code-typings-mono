@@ -161,7 +161,7 @@ export function MergeAltar({ onCancel }: { onCancel: () => void }) {
                                     onClick={() => pickSpecies(id)}
                                     className="relative flex flex-col items-center rounded-lg border p-1 cursor-pointer hover:border-rose-500"
                                 >
-                                    <span className="absolute -top-1 -right-1 z-[6] rounded-full bg-rose-600 text-white text-[10px] font-bold px-1">×{arr.length}</span>
+                                    <span className="absolute -top-1 -right-1 z-6 rounded-full bg-rose-600 text-white text-[10px] font-bold px-1">×{arr.length}</span>
                                     <PetPortrait meta={meta} />
                                     <span className="text-[10px] truncate max-w-full" style={{ color: RARITY_COLOR[meta.rarity] }}>{meta.displayName}</span>
                                 </div>

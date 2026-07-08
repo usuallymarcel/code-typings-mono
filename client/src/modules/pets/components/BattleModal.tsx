@@ -113,7 +113,7 @@ export function BattleModal() {
                                             <PetPortrait
                                                 key={m.instanceId}
                                                 meta={meta}
-                                                scale={0.9}
+                                                scale={1}
                                                 level={m.level}
                                                 attack={meta ? meta.baseAttack * m.level : undefined}
                                                 health={meta ? meta.baseHealth * m.level : undefined}

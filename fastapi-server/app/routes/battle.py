@@ -125,7 +125,7 @@ def fight(team_id: int, request: Request, db: Session = Depends(get_db)):
         pts = get_points_by_user_id(db, session.user_id)
 
         record_battle_result(team, result)
-        reward = reward_for(result, tier, team.streak)
+        reward = reward_for(db, session.user_id, result, tier, team.streak)
 
         points_remaining = pts.points + reward
         update_user_points(db, session.user_id, points_remaining)

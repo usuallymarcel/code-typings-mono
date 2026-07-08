@@ -151,9 +151,9 @@ def fight(team_id: int, request: Request, db: Session = Depends(get_db)):
         db.commit()
     except HTTPException:
         db.rollback(); raise
-    except Exception:
-        db.rollback()
-        raise HTTPException(500, "could not resolve battle")
+    # except Exception:
+    #     db.rollback()
+    #     raise HTTPException(500, "could not resolve battle")
     
     return {
         "ok": True,

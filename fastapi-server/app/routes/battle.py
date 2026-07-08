@@ -133,7 +133,7 @@ def fight(team_id: int, request: Request, db: Session = Depends(get_db)):
 
         if tier > profile.highest_trophy:
             profile.highest_trophy = tier
-            reward = reward_for(db, session.user_id, result, tier, team.streak)
+            reward = reward_for(result, tier, team.streak)
 
         points_remaining = pts.points + reward
         update_user_points(db, session.user_id, points_remaining)

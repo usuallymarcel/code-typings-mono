@@ -50,8 +50,8 @@ def _rarity_weights(tier: int) -> dict[str, float]:
     if tier >= 30:
         weights["rare"] = 0.0
 
-    for rarity in RARITY_ORDER:
-        weights[rarity] += 0.5
+    # for rarity in RARITY_ORDER:
+    #     weights[rarity] += 0.5
     
     return weights
 

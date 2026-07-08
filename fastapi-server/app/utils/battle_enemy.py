@@ -2,16 +2,57 @@ import random
 from app.utils.battle_engine import BattlePet, _resolve_special
 from app.models.pet_species import Pet_Species
 
+#old
+# base 6, 4, 2, 0, 0
+# growth 0 * 1 / 4 = 0
+# growth 1 * 1 / 4 = 0.25
+# growth 2 * 1 / 4 = 0.5
+# growth 3 * 1 / 4 = 0.75
+# growth 4 * 1 / 4 = 1
+
+# 6, 4.25, 2.5, 0.75, 1
+
+#new
+# base 12, 6, 1, 0, 0
+# growth 0 * 1 / 6 = 0
+# growth 1 * 1 / 6 = 0.167
+# growth 2 * 1 / 6 = 0.33
+# growth 3 * 1 / 6 = 0.5
+# growth 4 * 1 / 6 = 0.667
+
+# 6, 4.25, 2.5, 0.75, 1
 RARITY_ORDER = ["common", "uncommon", "rare", "epic", "legendary"]
+# BASE_CHANCES = [12, 6, 1, 0.5, 0.1]
+# GROWTH_RATE = [-0.2, -0.1, 0.4, 0.9, 1.8]
+
+# def _rarity_weights(tier: int) -> dict[str, float]:
+#     weights: dict[str, float] = {}
+#     for rank, rarity in enumerate(RARITY_ORDER):
+#         base = BASE_CHANCES[rank]
+#         growth = GROWTH_RATE[rank] * (tier / 5.0)
+#         weights[rarity] = base + growth
+#     return weights
 
 def _rarity_weights(tier: int) -> dict[str, float]:
-    weights: dict[str, float] = {}
-    for rank, rarity in enumerate(RARITY_ORDER):
-        base = max(0.0, 6.0 - 2.0 * rank)
-        growth = rank * (tier / 4.0)
-        weights[rarity] = base + growth
+    weights = {
+        "common": max(0.0, 12.0 - tier * 1.2),
+        "uncommon": max(0.0, 8.0 - max(0, tier - 5) * 0.8),
+        "rare": max(0.0, 2.0 + tier * 0.4),
+        "epic": max(0.0, 0.5 + tier * 0.7),
+        "legendary": max(0.0, tier * 0.8),
+    }
+
+
+    if tier >= 10:
+        weights["common"] = 0.0
+    if tier >= 15:
+        weights["uncommon"] = 0.0
+    if tier >= 30:
+        weights["rare"] = 0.0
+
     for rarity in RARITY_ORDER:
-        weights[rarity] += 0.1
+        weights[rarity] += 0.5
+    
     return weights
 
 
@@ -27,8 +68,9 @@ def _weighted_pick_rarity(rng: random.Random, weights: dict[str, float]) -> str:
 
 def build_enemy_team(tier: int, rng: random.Random, all_species: list[Pet_Species]) -> list[BattlePet]:
     size = 5
-    stat_bonus = tier // 3
-    level = 1 + (tier // 4)
+    # stat_bonus = tier // 3
+    stat_bonus = 0
+    level = 1 + (tier // 10)
 
     #build table of common: [pet, pet], uncommon: [pet] ..... 
     by_rarity: dict[str, list[Pet_Species]] = {r: [] for r in RARITY_ORDER}

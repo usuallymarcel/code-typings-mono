@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { usePetSpeciesContext } from '../contexts/PetSpeciesContext'
 import { usePointsContext } from '../../points/contexts/PointsContext'
 import { useBattle } from '../hooks/useBattle'
@@ -7,6 +7,7 @@ import { PetPortrait } from './PetPortrait'
 import { TeamBuilder } from './TeamBuilder'
 import { MergeAltar } from './MergeAltar'
 import { BattleArena } from './BattleArena'
+import { usePetInventoryContext } from '../contexts/PetInventoryContext'
 
 type View = 'hub' | 'build' | 'altar' | 'fight'
 
@@ -22,6 +23,11 @@ export function BattleModal() {
     const [fightResult, setFightResult] = useState<FightResult | null>(null)
     const [nonce, setNonce] = useState(0)
     const [error, setError] = useState<string | null>(null)
+    const { refetch: refetchInventory } = usePetInventoryContext()
+
+    useEffect(() => {
+        refetchInventory()
+    }, [refetchInventory])
 
     const goHub = () => { setError(null); setView('hub'); refetch() }
 
@@ -42,7 +48,7 @@ export function BattleModal() {
 
     if (view === 'build') {
         return (
-            <div className="w-[560px] max-w-full">
+            <div className="w-140 max-w-full">
                 <TeamBuilder initial={editing} saveTeam={saveTeam} busy={busy} onDone={goHub} onCancel={goHub} />
             </div>
         )
@@ -50,7 +56,7 @@ export function BattleModal() {
 
     if (view === 'altar') {
         return (
-            <div className="w-[560px] max-w-full">
+            <div className="w-140 max-w-full">
                 <MergeAltar onCancel={goHub} />
             </div>
         )
@@ -58,7 +64,7 @@ export function BattleModal() {
 
     if (view === 'fight' && fightResult) {
         return (
-            <div className="w-[560px] max-w-full">
+            <div className="w-140 max-w-full">
                 <BattleArena
                     key={nonce}
                     result={fightResult}

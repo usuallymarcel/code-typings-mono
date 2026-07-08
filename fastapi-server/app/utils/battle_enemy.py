@@ -84,7 +84,7 @@ def build_enemy_team(tier: int, rng: random.Random, all_species: list[Pet_Specie
     for _ in range(size):
         rarity = _weighted_pick_rarity(rng, weights)
 
-        pool = by_rarity.get(rarity) or all_species
+        pool = by_rarity.get(rarity)
 
         if not pool:
             raise ValueError("no enabled species available to build enemy team")

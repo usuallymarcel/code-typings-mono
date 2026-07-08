@@ -14,6 +14,7 @@ from app.crud.user_points import get_points_by_user_id, update_user_points
 from app.models.battle_log import Battle_Log
 from app.models.battle_team import Battle_Team
 from sqlalchemy.orm import Session
+from app.crud.battle_profile import get_or_create_profile
 
 router = APIRouter(prefix="/battle", tags=["battle"])
 
@@ -125,7 +126,14 @@ def fight(team_id: int, request: Request, db: Session = Depends(get_db)):
         pts = get_points_by_user_id(db, session.user_id)
 
         record_battle_result(team, result)
-        reward = reward_for(db, session.user_id, result, tier, team.streak)
+
+        profile = get_or_create_profile(db, session.user_id)
+
+        reward = 0
+
+        if tier > profile.highest_trophy:
+            profile.highest_trophy = tier
+            reward = reward_for(db, session.user_id, result, tier, team.streak)
 
         points_remaining = pts.points + reward
         update_user_points(db, session.user_id, points_remaining)
@@ -152,6 +160,7 @@ def fight(team_id: int, request: Request, db: Session = Depends(get_db)):
         "result": result,
         "reward": reward,
         "trophiesAfter": team.trophies,
+        "hightestTrophies": profile.highest_trophy,
         "streakAfter": team.streak,
         "pointsRemaining": points_remaining,
         "playerTeam": player_start,

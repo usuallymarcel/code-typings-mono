@@ -1,8 +1,6 @@
 import random
 from app.utils.battle_engine import BattlePet, _resolve_special
 from app.models.pet_species import Pet_Species
-from sqlalchemy.orm import Session
-from app.crud.battle_profile import get_or_create_profile
 
 RARITY_ORDER = ["common", "uncommon", "rare", "epic", "legendary"]
 
@@ -73,13 +71,7 @@ def build_enemy_team(tier: int, rng: random.Random, all_species: list[Pet_Specie
 
     return team
 
-def reward_for(db: Session, user_id: int, result: str, tier: int, streak_after: int) -> int:
-    profile = get_or_create_profile(db, user_id)
-
-    if tier > profile.highest_trophy:
-        profile.highest_trophy = tier
-    else:
-        return 0
+def reward_for(result: str, tier: int, streak_after: int) -> int:
 
     if result == "win":
         return 30 * (tier * 5) + (streak_after * 5) * 30

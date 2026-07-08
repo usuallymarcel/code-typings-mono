@@ -4,8 +4,8 @@ import type { BattleEffect, BattleResult, FightResult, PetSnapshot, Side } from 
 import { PetPortrait, type Flyout } from './PetPortrait'
 import styles from './battle.module.css'
 
-const SCALE = 1.15
-const T = { start: 550, ability: 520, effect: 460, clash: 720, faint: 420, gap: 130 }
+const SCALE = 0.8
+const T = { start: 550, ability: 820, effect: 860, clash: 720, faint: 420, gap: 130 }
 
 type ArenaPet = {
     uid: string
@@ -47,7 +47,7 @@ const cloneModel = (m: Model): Model => ({
 })
 
 const RESULT_COPY: Record<BattleResult, { title: string; color: string; sub: string }> = {
-    win: { title: 'VICTORY', color: '#4ade80', sub: 'The kibble is yours.' },
+    win: { title: 'VICTORY', color: '#4ade80', sub: 'The points are yours.' },
     loss: { title: 'DEFEAT', color: '#f87171', sub: 'Your pets have been humbled.' },
     draw: { title: 'DRAW', color: '#fbbf24', sub: 'Everyone loses, kind of.' },
 }
@@ -190,15 +190,15 @@ export function BattleArena({
     )
 
     return (
-        <div className="relative flex flex-col items-center gap-3 p-5 [background:var(--bg)] rounded-xl border w-full">
-            <div className="flex items-center gap-1 text-sm">
+        <div className="flex flex-col items-center gap-3 p-5 [background:var(--bg)] rounded-xl border w-full">
+            <div className="flex items-center gap-10 text-sm">
                 <span className="text-sky-400 font-semibold">You</span>
-                <span className="opacity-50">·🏆 {result.trophiesAfter} · 🔥 {result.streakAfter}</span>
+                {/* <span className="opacity-50">·🏆 {result.trophiesAfter} · 🔥 {result.streakAfter}</span> */}
                 <span className="text-rose-400 font-semibold ml-1">Foe</span>
             </div>
 
             <div className={`w-full overflow-x-auto ${clashing ? styles.hitShake : ''}`}>
-                <div className="flex items-end justify-center gap-3 min-h-37.5 px-2">
+                <div className="flex items-end gap-3 min-h-37.5 px-2">
                     {renderSide(model.player, 'player')}
                     <span className="self-center text-lg font-black opacity-40 shrink-0">VS</span>
                     {renderSide(model.enemy, 'enemy')}
@@ -212,7 +212,7 @@ export function BattleArena({
                     </span>
                     <span className="text-sm opacity-70">{RESULT_COPY[banner].sub}</span>
                     <span className="text-lg font-bold mt-1">
-                        {result.reward > 0 ? `+${result.reward} points 🪙` : 'No points 😔'}
+                        {result.reward > 0 ? `+${result.reward} points` : 'No points'}
                     </span>
                     <div className="flex gap-2 mt-2">
                         {canRematch && (
@@ -224,7 +224,7 @@ export function BattleArena({
                     </div>
                 </div>
             ) : (
-                <span className="text-xs opacity-50 h-6">the pets decide their fate…</span>
+                <span className="text-xs opacity-50 h-6"></span>
             )}
         </div>
     )

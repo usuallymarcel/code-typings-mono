@@ -2,7 +2,7 @@ from dataclasses import dataclass
 import math
 from typing import Literal
 
-type Rarity = Literal[
+Rarity = Literal[
     "common",
     "uncommon",
     "rare",

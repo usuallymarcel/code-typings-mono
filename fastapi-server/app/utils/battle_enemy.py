@@ -113,7 +113,7 @@ def build_enemy_team(tier: int, rng: random.Random, all_species: list[Pet_Specie
 def reward_for(result: str, tier: int, streak_after: int) -> int:
 
     if result == "win":
-        return 30 * (tier * 5) + (streak_after * 5) * 30
+        return 30 * (tier * 15) + (streak_after * 15) * 30
     if result == "draw":
-        return (30 * (tier * 5) + (streak_after * 5) * 30) // 2
+        return (30 * (tier * 15) + (streak_after * 15) * 30) // 2
     return 0

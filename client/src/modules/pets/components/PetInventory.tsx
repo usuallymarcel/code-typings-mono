@@ -7,6 +7,7 @@ import { InspectPetModal } from './InspectPet'
 
 export function PetInventory() {
     const { inventory, setActive, loading, refetch: refetchInventory, groups } = usePetInventoryContext()
+    const { refetch: speciesInventory } = usePetSpeciesContext()
     const { species } = usePetSpeciesContext()
     const [inspectOpen, setInspectOpen] = useState(false)
     const [petInspected, setPetInspected] = useState<SpeciesEntry & PetInstance | undefined>(undefined)
@@ -18,7 +19,8 @@ export function PetInventory() {
     
     useEffect(() => {
         refetchInventory()
-    }, [refetchInventory])
+        speciesInventory()
+    }, [refetchInventory, speciesInventory])
 
     if (loading && inventory.length === 0) {
         return <p className="p-4 opacity-70">Loading…</p> 

@@ -89,7 +89,7 @@ export function PetPortrait({
                 )}
 
                 {level != null && level > 1 && (
-                    <span className="absolute -top-1 -left-1 z-6 rounded-full bg-amber-500 text-black text-[9px] font-bold px-1 leading-tight">
+                    <span className="absolute top-1 -left-1 rounded-full bg-amber-500 text-black text-[9px] font-bold px-1 leading-tight">
                         L{level}
                     </span>
                 )}
@@ -106,7 +106,7 @@ export function PetPortrait({
             )}
 
             {(attack != null || health != null) && (
-                <div className="mt-1 flex items-center gap-2 text-xs font-bold tabular-nums">
+                <div className="mt-1 flex items-center gap-1 text-xs font-bold tabular-nums whitespace-nowrap">
                     {attack != null && <span className="text-orange-400">⚔{attack}</span>}
                     {health != null && <span style={{ color: hpColor }}>❤{Math.max(0, health)}</span>}
                 </div>

@@ -8,11 +8,9 @@ import { InspectPetModal } from './InspectPet'
 export function PetInventory() {
     const { inventory, setActive, loading, refetch: refetchInventory, groups } = usePetInventoryContext()
     const { refetch: speciesInventory } = usePetSpeciesContext()
-    const { species } = usePetSpeciesContext()
+    const { meta } = usePetSpeciesContext()
     const [inspectOpen, setInspectOpen] = useState(false)
     const [petInspected, setPetInspected] = useState<SpeciesEntry & PetInstance | undefined>(undefined)
-
-    const meta = (id: string) => species.find(s => s.speciesId === id)
 
     const [open, setOpen] = useState<Record<string, boolean>>(() => Object.fromEntries(groups.map(g => [g, false])))
 
@@ -42,7 +40,9 @@ export function PetInventory() {
                         
                         {open[g] === true ? '⌄' : '>'}</p>
                         
-                        {open[g] === true && inventory.filter(i => i.source === g).map(p => {
+                        {open[g] === true && 
+                        inventory.filter(i => i.source === g)
+                        .map(p => {
 
                         const speciesInfo = meta(p.speciesId)
                         const rarity: Rarity = speciesInfo?.rarity ?? 'common'
@@ -51,28 +51,6 @@ export function PetInventory() {
                             <div key={p.instanceId} className="flex items-center justify-between px-3 py-2 cursor-pointer" onClick={() => {setInspectOpen(true); setPetInspected({...meta(p.speciesId)!, ...p})}}>
                                 <div className='flex flex-col'>
                                     {
-                                    // p.nickname == undefined 
-                                    // ? 
-                                    // <div className='flex flex-row gap-1'>
-                                    //     {/* <input 
-                                    //     type="text" 
-                                    //     className='font-light text-xs border rounded-md px-1 max-w-25' 
-                                    //     value={nicknames[p.instanceId] ?? p.nickname ?? 'unnamed'} 
-                                    //     maxLength={20}
-                                    //     onChange={(e) => 
-                                    //         setNicknames(prev => ({
-                                    //             ...prev,
-                                    //             [p.instanceId]: e.target.value
-                                    //         }))
-                                    //     }
-                                    //     /> */}
-                                    //     {/* <button 
-                                    //     className='border rounded-md px-2 text-xs bg-(--button-bg) text-(--button-text)' 
-                                    //     onClick={() => {
-                                    //         if (window.confirm('This can only be done once')) setNickname(p.instanceId, nicknames[p.instanceId] ?? p.nickname ?? '')}}
-                                    //     >Set</button> */}
-                                    // </div> 
-                                    // : 
                                     <p className='text-xs font-medium italic'>{p.nickname == null ? '' : p.nickname}</p>
                                     }
                                 <span className="font-medium text-sm" style={{ color: RARITY_COLOR[rarity] }}>

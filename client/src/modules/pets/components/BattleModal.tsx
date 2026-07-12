@@ -8,12 +8,14 @@ import { TeamBuilder } from './TeamBuilder'
 import { MergeAltar } from './MergeAltar'
 import { BattleArena } from './BattleArena'
 import { usePetInventoryContext } from '../contexts/PetInventoryContext'
+import { InspectPetModal } from './InspectPet'
+import type { PetInstance, SpeciesEntry } from '../models/pet'
 
 type View = 'hub' | 'build' | 'altar' | 'fight'
 
 export function BattleModal() {
     const { teams, loading, busy, refetch, saveTeam, fight } = useBattle()
-    const { species } = usePetSpeciesContext()
+    const { species, meta: getSpeciesById } = usePetSpeciesContext()
     const { setPoints } = usePointsContext()
     const metaOf = useMemo(() => new Map(species.map(s => [s.speciesId, s])), [species])
 
@@ -23,7 +25,10 @@ export function BattleModal() {
     const [fightResult, setFightResult] = useState<FightResult | null>(null)
     const [nonce, setNonce] = useState(0)
     const [error, setError] = useState<string | null>(null)
-    const { refetch: refetchInventory } = usePetInventoryContext()
+    const { refetch: refetchInventory, meta: getInstanceById } = usePetInventoryContext()
+
+    const [inspectOpen, setInspectOpen] = useState(false)
+    const [petInspected, setPetInspected] = useState<SpeciesEntry & PetInstance | undefined>(undefined)
 
     useEffect(() => {
         refetchInventory()
@@ -110,6 +115,7 @@ export function BattleModal() {
                                     team.members.map(m => {
                                         const meta = metaOf.get(m.speciesId)
                                         return (
+
                                             <PetPortrait
                                                 key={m.instanceId}
                                                 meta={meta}
@@ -117,6 +123,7 @@ export function BattleModal() {
                                                 level={m.level}
                                                 attack={meta ? meta.baseAttack * m.level : undefined}
                                                 health={meta ? meta.baseHealth * m.level : undefined}
+                                                onClick={() => {setInspectOpen(true); setPetInspected({...getInstanceById(m.speciesId)!, ...getSpeciesById(m.speciesId)!})}}
                                             />
                                         )
                                     })
@@ -142,6 +149,8 @@ export function BattleModal() {
                     ))}
                 </div>
             )}
+            <InspectPetModal isOpen={inspectOpen} onClose={() => {setInspectOpen(false); setPetInspected(undefined)} } pet={petInspected} />
+            
         </div>
     )
 }

@@ -89,5 +89,7 @@ export function usePetInventory() {
         }
     }, [fetchInventory])
 
-    return { inventory, groups, loading, setActive, refetch: fetchInventory, setNickname, merge }
+    const meta = useCallback((id: string) => inventory.find(s => s.speciesId === id), [inventory])
+
+    return { inventory, groups, loading, setActive, refetch: fetchInventory, setNickname, merge, meta }
 }

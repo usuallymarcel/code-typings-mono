@@ -56,6 +56,7 @@ export function PetPortrait({
     name,
     showBar = false,
     flyout,
+    onClick
 }: {
     meta: SpeciesEntry | undefined
     scale?: number
@@ -68,6 +69,7 @@ export function PetPortrait({
     name?: string
     showBar?: boolean
     flyout?: Flyout | null
+    onClick?: () => void
 }) {
     const frameW = meta?.animations?.idle?.frameWidth ?? meta?.width ?? 48
     const frameH = meta?.animations?.idle?.frameHeight ?? meta?.height ?? 48
@@ -78,7 +80,7 @@ export function PetPortrait({
     const hpColor = hpRatio > 0.5 ? '#4ade80' : hpRatio > 0.25 ? '#fbbf24' : '#f87171'
 
     return (
-        <div className="relative flex flex-col items-center" style={{ width: w }}>
+        <div className="relative flex flex-col cursor-pointer items-center" style={{ width: w }} onClick={onClick}>
             <div className="relative flex items-end justify-center" style={{ width: w, height: h }}>
                 {flyout && (
                     <div key={flyout.id} className={styles.flyout} style={{ color: FLYOUT_COLOR[flyout.kind] }}>

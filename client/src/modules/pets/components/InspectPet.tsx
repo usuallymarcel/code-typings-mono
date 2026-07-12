@@ -57,7 +57,7 @@ export function InspectPetModal({isOpen, onClose, pet}: {isOpen: boolean, onClos
                     <div 
                         className="mt-auto mb-auto mr-auto ml-auto"
                         style={{
-                            backgroundPosition: `-${frame * pet.animations[sprite].frameWidth}px 0px`, 
+                            backgroundPosition: `-${frame * pet.animations[sprite].frameWidth}px 0px`,
                             backgroundImage: `url(${serverUrl}${pet.spriteSheets[sprite]})`,
                             width: pet.width,
                             height: pet.height,

@@ -4,6 +4,10 @@ import { usePetSpeciesContext } from '../contexts/PetSpeciesContext'
 import type { BattleTeam } from '../models/battle'
 import { PetPortrait } from './PetPortrait'
 import { RARITY_COLOR } from './rarity'
+import { TiMinus, TiPlus } from "react-icons/ti";
+import { InspectPetModal } from './InspectPet'
+import type { PetInstance, SpeciesEntry } from '../models/pet'
+
 
 const TEAM_SIZE = 5
 
@@ -20,13 +24,15 @@ export function TeamBuilder({
     onDone: () => void
     onCancel: () => void
 }) {
-    const { inventory } = usePetInventoryContext()
-    const { species } = usePetSpeciesContext()
+    const { inventory, meta: getInstanceById } = usePetInventoryContext()
+    const { species, meta: getSpeciesById } = usePetSpeciesContext()
     const metaOf = useMemo(() => new Map(species.map(s => [s.speciesId, s])), [species])
 
     const [name, setName] = useState(initial?.name ?? '')
     const [picked, setPicked] = useState<string[]>(initial?.members.map(m => m.instanceId) ?? [])
     const [error, setError] = useState<string | null>(null)
+    const [inspectOpen, setInspectOpen] = useState(false)
+    const [petInspected, setPetInspected] = useState<SpeciesEntry & PetInstance | undefined>(undefined)
 
     const byId = useMemo(() => new Map(inventory.map(p => [p.instanceId, p])), [inventory])
 
@@ -106,18 +112,21 @@ export function TeamBuilder({
                         return (
                             <div
                                 key={p.instanceId}
-                                onClick={() => toggle(p.instanceId)}
-                                className={`flex flex-col items-center rounded-lg border p-1 cursor-pointer transition-colors ${on ? 'border-sky-500 bg-sky-500/10' : 'hover:border-white/40'}`}
+                                className={`flex flex-col items-center rounded-lg border p-1 transition-colors ${on ? 'border-sky-500 bg-sky-500/10' : 'hover:border-white/40'}`}
                             >
                                 <PetPortrait
                                     meta={meta}
                                     level={p.level}
                                     attack={meta.baseAttack * p.level}
                                     health={meta.baseHealth * p.level}
+                                    onClick={() => {setInspectOpen(true); setPetInspected({...getInstanceById(p.speciesId)!, ...getSpeciesById(p.speciesId)!})}}
                                 />
                                 <span className="text-[10px] truncate max-w-full" style={{ color: RARITY_COLOR[meta.rarity] }}>
                                     {p.nickname || meta.displayName}
                                 </span>
+                                <div className="w-full flex flex-row justify-around h-4">
+                                    <button className={`flex-1 flex justify-center items-center cursor-pointer hover:border rounded-xl`} onClick={() => toggle(p.instanceId)}>{ on ? <TiMinus /> : <TiPlus />}</button>
+                                </div>
                             </div>
                         )
                     })}
@@ -136,6 +145,9 @@ export function TeamBuilder({
                     {busy ? 'Saving…' : 'Save Team'}
                 </button>
             </div>
+            
+            <InspectPetModal isOpen={inspectOpen} onClose={() => {setInspectOpen(false); setPetInspected(undefined)} } pet={petInspected} />
+            
         </div>
     )
 }

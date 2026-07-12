@@ -106,7 +106,7 @@ export function PetPortrait({
             )}
 
             {(attack != null || health != null) && (
-                <div className="mt-1 flex items-center gap-1 text-xs font-bold tabular-nums whitespace-nowrap">
+                <div className="mt-1 flex items-center gap-1 text-xs font-bold tabular-nums">
                     {attack != null && <span className="text-orange-400">⚔{attack}</span>}
                     {health != null && <span style={{ color: hpColor }}>❤{Math.max(0, health)}</span>}
                 </div>

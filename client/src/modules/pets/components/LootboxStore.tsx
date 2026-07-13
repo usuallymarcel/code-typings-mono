@@ -6,11 +6,13 @@ import type { Rarity } from '../models/pet'
 import { usePetSpeciesContext } from '../contexts/PetSpeciesContext'
 import { useLootboxContext } from '../contexts/LootboxContext'
 import { useEffect } from 'react'
+import { usePetInventoryContext } from '../contexts/PetInventoryContext'
 
 export function LootboxStore({ onOpened }: { onOpened?: () => void }) {
     const { boxes, open, opening, refetch: refetchLootboxes } = useLootboxContext()
-    const { species } = usePetSpeciesContext()
+    const { species, refetch: speciesInventory } = usePetSpeciesContext()
     const { points, fetchPoints } = usePointsContext()
+    const { refetch: refetchInventory } = usePetInventoryContext()
     const { openModal } = useModal()
 
     useEffect(() => {
@@ -26,6 +28,8 @@ export function LootboxStore({ onOpened }: { onOpened?: () => void }) {
             await fetchPoints()            // points were debited server-side
             onOpened?.()                   // let parent refetch inventory/species
             openModal(<LootboxRevealModal result={result} species={species} />)
+            refetchInventory()
+            speciesInventory()
         } catch (err) {
             openModal(
                 <p className="text-red-400 p-4">

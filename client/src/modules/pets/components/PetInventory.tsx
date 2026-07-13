@@ -2,23 +2,16 @@ import { RARITY_COLOR } from './rarity'
 import type { PetInstance, Rarity, SpeciesEntry } from '../models/pet'
 import { usePetInventoryContext } from '../contexts/PetInventoryContext'
 import { usePetSpeciesContext } from '../contexts/PetSpeciesContext'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { InspectPetModal } from './InspectPet'
 
 export function PetInventory() {
-    const { inventory, setActive, loading, refetch: refetchInventory, groups } = usePetInventoryContext()
-    const { refetch: speciesInventory } = usePetSpeciesContext()
+    const { inventory, setActive, loading, groups } = usePetInventoryContext()
     const { meta } = usePetSpeciesContext()
     const [inspectOpen, setInspectOpen] = useState(false)
     const [petInspected, setPetInspected] = useState<SpeciesEntry & PetInstance | undefined>(undefined)
 
     const [open, setOpen] = useState<Record<string, boolean>>(() => Object.fromEntries(groups.map(g => [g, false])))
-
-    
-    useEffect(() => {
-        refetchInventory()
-        speciesInventory()
-    }, [refetchInventory, speciesInventory])
 
     if (loading && inventory.length === 0) {
         return <p className="p-4 opacity-70">Loading…</p> 

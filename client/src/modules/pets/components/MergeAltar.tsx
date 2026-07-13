@@ -9,7 +9,7 @@ import styles from './battle.module.css'
 const DROP_OFFSETS = ['22%', '46%', '68%']
 const DROP_DELAYS = ['0s', '0.15s', '0.3s']
 
-const sacrificesNeeded = (level: number) => Math.min(level * 3, 5)
+const sacrificesNeeded = (level: number) => Math.min(level * 3, 3)
 
 type Snap = { name: string; vessel: PetInstance; offerings: PetInstance[]; meta: SpeciesEntry | undefined }
 

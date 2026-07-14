@@ -111,7 +111,7 @@ def merge_pets_req(body: MergeRequestBody, request: Request, db = Depends(get_db
     if body.target_id in body.sacrifices:
         raise HTTPException(400, "connot merge pet into itself")
     
-    sacrifices_needed = min(target.level * 3, 5)
+    sacrifices_needed = 3
 
     if len(body.sacrifices) != sacrifices_needed:
         raise HTTPException(400, "wrong amount of sacrifices")

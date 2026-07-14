@@ -35,6 +35,7 @@ export interface PetInstance {
     unlockedAt: string
     active: boolean
     source?: string
+    level: number
 }
 
 export interface RunTimePet {

@@ -22,6 +22,7 @@ import { ThemeShop } from '../themes'
 import Chat from '../chat'
 import { LootboxStore } from '../pets/components/LootboxStore'
 import { PetInventory } from '../pets/components/PetInventory'
+import { BattleModal } from '../pets/components/BattleModal'
 
 const sizeClasses = [
     "text-xl",
@@ -386,6 +387,7 @@ const displayTypeText = () => {
                 
                 {user && <OutlineButton onClick={() => openModal(<PetInventory />)}>Pets</ OutlineButton>}
                 {user && <OutlineButton onClick={() => openModal(<LootboxStore />)}>Lootboxes</OutlineButton>}
+                {user && <OutlineButton onClick={() => openModal(<BattleModal />)}>Battle</OutlineButton>}
  
                 </div>
             </div>

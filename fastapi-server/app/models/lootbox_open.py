@@ -17,7 +17,7 @@ class LootboxOpen(Base):
 
     rolled_species: Mapped[str] = mapped_column(String(64))
 
-    pet_instance_id: Mapped[int | None] = mapped_column(ForeignKey('pet_instances.id'))
+    pet_instance_id: Mapped[int | None] = mapped_column(Integer)
 
     cost: Mapped[int] = mapped_column(Integer)
 

@@ -34,6 +34,8 @@ export function usePetSpecies() {
         }
     }, [])
 
+    const meta = useCallback((id: string) => species.find(s => s.speciesId === id), [species])
+
     useEffect(() => {
         fetchSpecies()
         window.addEventListener('focus', fetchSpecies)
@@ -41,6 +43,6 @@ export function usePetSpecies() {
     }, [fetchSpecies])
 
     return {
-        species, loading, error, refetch: fetchSpecies
+        species, loading, error, refetch: fetchSpecies, meta
     }
 }

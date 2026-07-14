@@ -68,5 +68,28 @@ export function usePetInventory() {
         }
     }, [fetchInventory])
 
-    return { inventory, groups, loading, setActive, refetch: fetchInventory, setNickname }
+    // feed same-species dupes into a target to level it up. the sacrifices are
+    // deleted server-side, so refetch once the ritual is done.
+    const merge = useCallback(async (targetId: string, sacrifices: string[]) => {
+        try {
+            const res = await fetch(`${serverUrl}/pets/merge`, {
+                method: 'POST',
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ target_id: targetId, sacrifices })
+            })
+            const data = await res.json()
+            if (!res.ok || !data.ok) {
+                throw new Error(data.detail ?? 'the ritual failed')
+            }
+            // /pets/merge returns just the levelled-up target, not a full instance
+            return data.target as { instanceId: string; speciesId: string; nickname: string | null; level: number }
+        } finally {
+            await fetchInventory()
+        }
+    }, [fetchInventory])
+
+    const meta = useCallback((id: string) => inventory.find(s => s.speciesId === id), [inventory])
+
+    return { inventory, groups, loading, setActive, refetch: fetchInventory, setNickname, merge, meta }
 }

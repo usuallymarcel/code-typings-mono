@@ -72,7 +72,7 @@ export function BattleArena({
     const [clashing, setClashing] = useState(false)
     const [banner, setBanner] = useState<BattleResult | null>(null)
 
-    const newHighest = result.trophiesAfter > result.hightestTrophies
+    const newHighest = result.newHighest
 
     useEffect(() => {
         let cancelled = false

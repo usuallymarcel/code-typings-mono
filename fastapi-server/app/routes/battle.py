@@ -130,12 +130,12 @@ def fight(team_id: int, request: Request, db: Session = Depends(get_db)):
         profile = get_or_create_profile(db, session.user_id)
 
         reward = 0
-        new_heighest = False
+        new_highest = False
 
         if team.trophies > profile.highest_trophy:
             profile.highest_trophy = team.trophies
             reward = reward_for(result, team.trophies, team.streak)
-            new_heighest = True
+            new_highest = True
 
         points_remaining = pts.points + reward
         update_user_points(db, session.user_id, points_remaining)
@@ -162,7 +162,7 @@ def fight(team_id: int, request: Request, db: Session = Depends(get_db)):
         "result": result,
         "reward": reward,
         "trophiesAfter": team.trophies,
-        "newHighest": new_heighest,
+        "newHighest": new_highest,
         "hightestTrophies": profile.highest_trophy,
         "streakAfter": team.streak,
         "pointsRemaining": points_remaining,

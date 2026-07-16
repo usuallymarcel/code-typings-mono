@@ -114,10 +114,7 @@ def reward_for(result: str, tier: int, streak_after: int) -> int:
     if result != "win":
         return 0
 
-    base_reward = (
-        2000 * tier
-        + 200 * max(0, tier - 30) ** 2
-    )
+    base_reward = round(25000 * (tier / 10) ** 1.35)
 
     streak_multiplier = 1 + min(streak_after, 10) * 0.05
 

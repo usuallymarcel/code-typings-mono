@@ -21,6 +21,16 @@ export function useBattle() {
         }
     }, [])
 
+    const deleteTeam = useCallback(async (team_id: number) => {
+        try {
+            await fetch(`${serverUrl}/battle/team/${team_id}`, { credentials: 'include', method: 'DELETE'})
+            fetchTeams()
+
+        } catch {
+            console.error("failed to delete team")
+        }
+    }, [])
+
     const fetchProfile = useCallback(async () => {
         setLoading(true)
         try {
@@ -76,5 +86,5 @@ export function useBattle() {
         }
     }, [])
 
-    return { teams, loading, busy, refetch: fetchTeams, saveTeam, fight, profile, refetchProfile: fetchProfile }
+    return { teams, loading, busy, refetch: fetchTeams, saveTeam, fight, profile, refetchProfile: fetchProfile, deleteTeam }
 }

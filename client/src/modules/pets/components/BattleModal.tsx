@@ -14,7 +14,7 @@ import type { PetInstance, SpeciesEntry } from '../models/pet'
 type View = 'hub' | 'build' | 'altar' | 'fight'
 
 export function BattleModal() {
-    const { teams, loading, busy, refetch, saveTeam, fight, profile } = useBattle()
+    const { teams, loading, busy, refetch, saveTeam, fight, profile, deleteTeam } = useBattle()
     const { species, meta: getSpeciesById } = usePetSpeciesContext()
     const { setPoints } = usePointsContext()
     const metaOf = useMemo(() => new Map(species.map(s => [s.speciesId, s])), [species])
@@ -35,6 +35,14 @@ export function BattleModal() {
     }, [refetchInventory])
 
     const goHub = () => { setError(null); setView('hub'); refetch() }
+
+    const handleDelete = (team: BattleTeam) => { 
+        const result = window.confirm("Are you sure you want to delete?")
+
+        if (result) {
+            deleteTeam(team.id)
+        }
+    }
 
     const runFight = async (team: BattleTeam) => {
         setError(null)
@@ -144,6 +152,11 @@ export function BattleModal() {
                                     className="rounded-lg px-3 py-1 border hover:bg-white/10"
                                 >
                                     Edit
+                                </button>
+                                <button 
+                                    onClick={() => handleDelete(team)}
+                                    className="rounded-lg px-3 py-1 border border-red-400 text-red-400 hover:bg-black/40">
+                                    x
                                 </button>
                             </div>
                         </div>

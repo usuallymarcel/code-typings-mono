@@ -21,6 +21,13 @@ export interface BattleTeam {
     members: BattleTeamMember[]
 }
 
+export interface BattleProfile {
+    user_id: number
+    highest_trophy: number
+    updated_at: string
+    id: number
+}
+
 // ---- Fight replay (shape of /battle/fight/{team_id}) ------------------------
 // The server runs the whole sim and hands us an ordered event list to replay.
 // A pet's special is serialized from a python NamedTuple, so it arrives as a

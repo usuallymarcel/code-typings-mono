@@ -14,7 +14,7 @@ import type { PetInstance, SpeciesEntry } from '../models/pet'
 type View = 'hub' | 'build' | 'altar' | 'fight'
 
 export function BattleModal() {
-    const { teams, loading, busy, refetch, saveTeam, fight } = useBattle()
+    const { teams, loading, busy, refetch, saveTeam, fight, profile } = useBattle()
     const { species, meta: getSpeciesById } = usePetSpeciesContext()
     const { setPoints } = usePointsContext()
     const metaOf = useMemo(() => new Map(species.map(s => [s.speciesId, s])), [species])
@@ -87,6 +87,7 @@ export function BattleModal() {
         <div className="w-140 max-w-full flex flex-col gap-3 p-5 [background:var(--bg)] rounded-xl border">
             <div className="flex items-center justify-between">
                 <h2 className="text-lg font-semibold">⚔️ Battles</h2>
+                <h2 className="text-md">Highest Tier: <span className="font-semibold text-amber-400">{profile?.highest_trophy}</span></h2>
                 <div className="flex gap-2">
                     <button onClick={() => { setEditing(undefined); setView('build') }} className="rounded-lg px-3 py-1 border text-sm hover:bg-white/10">＋ New Team</button>
                     <button onClick={() => setView('altar')} className="rounded-lg px-3 py-1 border border-rose-600 text-rose-400 text-sm hover:bg-rose-600/10">🩸 Altar</button>

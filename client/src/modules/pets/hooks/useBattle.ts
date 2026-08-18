@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useState } from 'react'
 import { serverUrl } from '../../../utils/env'
-import type { BattleTeam, FightResult } from '../models/battle'
+import type { BattleProfile, BattleTeam, FightResult } from '../models/battle'
 
 export function useBattle() {
     const [teams, setTeams] = useState<BattleTeam[]>([])
     const [loading, setLoading] = useState(false)
     const [busy, setBusy] = useState(false)
+    const [profile, setProfile] = useState<BattleProfile | null>(null)
 
     const fetchTeams = useCallback(async () => {
         setLoading(true)
@@ -20,9 +21,24 @@ export function useBattle() {
         }
     }, [])
 
+    const fetchProfile = useCallback(async () => {
+        setLoading(true)
+        try {
+            const res = await fetch(`${serverUrl}/battle/profile`, { credentials: 'include'})
+            const data = await res.json()
+
+            if (data.ok) {
+                setProfile(data.profile as BattleProfile)
+            }
+        } finally {
+            setLoading(false)
+        }
+    }, [])
+
     useEffect(() => {
         fetchTeams()
-    }, [fetchTeams])
+        fetchProfile()
+    }, [fetchTeams, fetchProfile])
 
     const saveTeam = useCallback(async (name: string, team: string[]) => {
         setBusy(true)
@@ -60,5 +76,5 @@ export function useBattle() {
         }
     }, [])
 
-    return { teams, loading, busy, refetch: fetchTeams, saveTeam, fight }
+    return { teams, loading, busy, refetch: fetchTeams, saveTeam, fight, profile, refetchProfile: fetchProfile }
 }

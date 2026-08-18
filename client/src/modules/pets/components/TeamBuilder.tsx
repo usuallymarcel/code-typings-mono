@@ -29,6 +29,7 @@ export function TeamBuilder({
     const metaOf = useMemo(() => new Map(species.map(s => [s.speciesId, s])), [species])
 
     const [name, setName] = useState(initial?.name ?? '')
+    const [search, setSearch]  = useState<string>('')
     const [picked, setPicked] = useState<string[]>(initial?.members.map(m => m.instanceId) ?? [])
     const [error, setError] = useState<string | null>(null)
     const [inspectOpen, setInspectOpen] = useState(false)
@@ -99,6 +100,14 @@ export function TeamBuilder({
             </div>
 
             <p className="text-center text-xs opacity-60">Pick {TEAM_SIZE} pets ({picked.length}/{TEAM_SIZE})</p>
+            <input
+                type="text"
+                value={search}
+                maxLength={20}
+                onChange={(e) => setSearch(e.target.value)}
+                className="border rounded px-2 py-1 w-50"
+                placeholder='Search'
+            />
 
             {/* the roster */}
             {inventory.length === 0 ? (
@@ -108,6 +117,9 @@ export function TeamBuilder({
                     {inventory.map(p => {
                         const meta = metaOf.get(p.speciesId)
                         if (!meta) return null
+                        if (search && !meta.displayName.toLowerCase().includes(search.toLowerCase()) ) {
+                            return null
+                        }
                         const on = picked.includes(p.instanceId)
                         return (
                             <div

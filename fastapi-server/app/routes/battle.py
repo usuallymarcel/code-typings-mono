@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 from app.database import get_db
 from app.utils.session_tokens import get_session_from_request
-from app.crud.battle import get_team_by_id, get_user_teams, record_battle_result, save_team
+from app.crud.battle import delete_team_by_id, get_team_by_id, get_user_teams, record_battle_result, save_team
 from app.crud.pets import list_user_instances
 from app.utils.battle_engine import BattlePet, build_battle_pet, make_rng, simulate
 from app.crud.pet_species import get_pet_species
@@ -99,6 +99,14 @@ def set_team(body: TeamRequestBody, request: Request, db: Session = Depends(get_
         "ok": True,
         "teams": [serialize_team(t) for t in teams]
     }
+
+@router.delete("/team/{team_id}")
+def delete_team(team_id: int, request: Request, db: Session = Depends(get_db)):
+    session = get_session_from_request(db, request)
+
+    delete_team_by_id(db, session.user_id, team_id)
+
+    return { "ok": True, "deleted": True }
 
 @router.post("/fight/{team_id}")
 def fight(team_id: int, request: Request, db: Session = Depends(get_db)):

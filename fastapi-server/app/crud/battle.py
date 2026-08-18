@@ -26,6 +26,10 @@ def get_or_create_team(db: Session, user_id: int, name: str) -> Battle_Team:
 def get_team_by_id(db: Session, user_id: int, team_id: int):
     return db.query(Battle_Team).filter(Battle_Team.user_id == user_id, Battle_Team.id == team_id).options(selectinload(Battle_Team.members).selectinload(Battle_Team_Member.pet_instance)).first()
 
+def delete_team_by_id(db: Session, user_id: int, team_id: int):
+    db.query(Battle_Team).filter(Battle_Team.user_id == user_id, Battle_Team.id == team_id).delete()
+    db.commit()
+
 def get_team_members(db: Session, team_id: int) -> list[Battle_Team_Member]:
     return db.query(Battle_Team_Member).filter(Battle_Team_Member.team_id == team_id).all()
 

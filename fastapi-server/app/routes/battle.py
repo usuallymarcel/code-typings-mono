@@ -39,8 +39,19 @@ def serialize_team(team: Battle_Team) -> dict[str, object]:
         ],
     }
 
-@router.get("/teams")
+@router.get("/profile")
 def get_profile(request: Request, db: Session = Depends(get_db)):
+    session = get_session_from_request(db, request)
+
+    profile = get_or_create_profile(db, session.user_id)
+
+    return {
+        "ok": True,
+        "profile": profile
+    }
+
+@router.get("/teams")
+def get_teams(request: Request, db: Session = Depends(get_db)):
     session = get_session_from_request(db, request)
 
     teams = get_user_teams(db, session.user_id)

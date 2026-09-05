@@ -29,7 +29,7 @@ export function useBattle() {
         } catch {
             console.error("failed to delete team")
         }
-    }, [])
+    }, [fetchTeams])
 
     const fetchProfile = useCallback(async () => {
         setLoading(true)

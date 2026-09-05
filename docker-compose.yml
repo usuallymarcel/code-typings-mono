@@ -41,6 +41,7 @@ services:
       - "traefik.http.routers.code-typings-fastapi.middlewares=typings-ratelimit,typings-buffer,fastapi-strip"
     networks:
       - proxy
+      - postgres
     env_file:
       - ./fastapi-server/.env
 
@@ -60,4 +61,6 @@ services:
 
 networks:
   proxy:
+    external: true
+  postgres:
     external: true
